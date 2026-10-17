@@ -1,0 +1,11 @@
+target/
+data/
+logs/
+*.db
+*.db-wal
+*.db-shm
+downloads/
+config.yaml
+!config.example.yaml
+.idea/
+*.iml

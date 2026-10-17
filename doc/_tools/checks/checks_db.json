@@ -1,0 +1,7 @@
+{
+  "存在": ["V1.1", "8. 文档效力与修订记录", "3.5 sync_cursor（增量水位线表）",
+           "3.6 quota_ledger（调用配额账本表）", "media_key TEXT NOT NULL", "user_rest_id TEXT NOT NULL UNIQUE",
+           "UNIQUE(tweet_id, media_key)", "PRAGMA journal_mode = WAL", "ABORTED", "attempt_count",
+           "CREATE TABLE IF NOT EXISTS sync_cursor", "CREATE TABLE IF NOT EXISTS quota_ledger"],
+  "不存在": ["V1.0", "SUCCESS / FAILED / SKIPPED", "UNIQUE(tweet_id, media_url)", "UK (tweet_id, media_url)"]
+}

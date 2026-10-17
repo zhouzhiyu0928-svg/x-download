@@ -1,0 +1,12 @@
+save-path: "./downloads"
+db-path: "D:/x down/_evidence/demo.db"
+log: {level: INFO, file: "D:/x down/_evidence/demo.log"}
+accounts:
+  - name: account1
+    note: "本人账号"
+    cookie: "auth_token=REPLACE_ME; ct0=REPLACE_ME;"
+proxy: {mode: single, list: ["http://127.0.0.1:10808"]}
+download:
+  max-concurrent: 8
+  naming-template: "{user}/{date}_{tweetId}_{mediaKey}.{ext}"
+quota: {per-account-daily: 1000, reserve-for-retry: 50, estimate-tweets-per-call: 19}

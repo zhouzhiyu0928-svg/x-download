@@ -1,0 +1,8 @@
+{
+  "存在": ["V1.1", "11. 文档效力与修订记录", "4.2.4 操作定义失效识别与恢复", "per-account-daily",
+           "estimate-tweets-per-call", "db-path", "QuotaExhaustedException", "x-twitter-auth-type",
+           "accountBinding", "acquire(String preferredName)", "mediaKey", "PathSanitizer",
+           "journal_mode = WAL", "synchronous = NORMAL", "AppBootstrap", "--dry-run",
+           "AccountPool（多账号 Cookie 池）", "status='SUCCESS'", "ON CONFLICT(tweet_id, media_key)"],
+  "不存在": ["V1.0", "Account（单账号）", "SUCCESS / FAILED / SKIPPED", "(String operation, String queryId"]
+}

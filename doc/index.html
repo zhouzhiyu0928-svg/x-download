@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>X Media Downloader · Java 版</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --surface: #12181f;
+      --surface2: #1a222d;
+      --border: #2a3544;
+      --text: #e8eef6;
+      --muted: #8b9bb0;
+      --accent: #3b82f6;
+      --accent2: #60a5fa;
+      --green: #34d399;
+      --orange: #fbbf24;
+      --purple: #a78bfa;
+      --radius: 12px;
+      --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      --mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* background grid */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* header */
+    header {
+      text-align: center;
+      padding: 48px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.25);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 28px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .meta span {
+      font-size: 13px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 8px;
+    }
+
+    /* sections */
+    section {
+      margin-bottom: 48px;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    p, li {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    /* cards */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .card:hover {
+      border-color: rgba(59,130,246,0.4);
+      transform: translateY(-2px);
+    }
+
+    .card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .card p {
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+
+    .card .icon {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    /* feature list */
+    .features {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .features li {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .features li::before {
+      content: "✓";
+      color: var(--green);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* code block */
+    .code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      color: #c5d0de;
+    }
+
+    .code .cmt { color: #5c6b7a; }
+    .code .cmd { color: var(--accent2); }
+    .code .flag { color: var(--orange); }
+    .code .val { color: var(--green); }
+
+    /* architecture */
+    .arch {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #9db0c5;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* tech tags */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      font-size: 12.5px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .tag.blue { color: var(--accent2); border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.08); }
+    .tag.green { color: var(--green); border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); }
+    .tag.purple { color: var(--purple); border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.08); }
+    .tag.orange { color: var(--orange); border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+
+    /* docs links */
+    .docs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .doc-link {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .doc-link:hover {
+      border-color: var(--accent);
+      background: var(--surface2);
+    }
+
+    .doc-link strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .doc-link span {
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    /* footer */
+    footer {
+      margin-top: 64px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--accent2);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    .disclaimer {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #5c6b7a;
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="badge">Java · Local · Open Design</div>
+      <h1>X Media Downloader</h1>
+      <p class="subtitle">基于 twitter_download 功能的 Java 重写版本地媒体下载工具，支持用户、Tag、评论区、纯文本与主页内容。</p>
+      <div class="meta">
+        <span>Java 17+</span>
+        <span>OkHttp · Jackson · SQLite</span>
+        <span>CLI · 多账号 · 增量同步</span>
+        <span>v1.1 Design</span>
+      </div>
+    </header>
+
+    <!-- 能力 -->
+    <section>
+      <h2><span class="dot"></span>核心能力</h2>
+      <ul class="features">
+        <li>按用户下载推文中的图片、视频、GIF，支持排除转推、时间范围与增量同步</li>
+        <li>按 Tag / 高级搜索批量下载媒体，可选保存文本</li>
+        <li>下载指定用户或推文的评论区媒体</li>
+        <li>获取纯文本推文与用户主页信息（头像、Banner、简介）</li>
+        <li>多账号 Cookie 池、代理、请求限流与账号日调用配额管理</li>
+        <li>SQLite 记录下载状态，支持断点续传与失败重试</li>
+        <li>可配置命名模板与清晰 CLI 子命令</li>
+      </ul>
+    </section>
+
+    <!-- 快速开始 -->
+    <section>
+      <h2><span class="dot"></span>快速开始（设计约定）</h2>
+      <div class="code">
+<span class="cmt"># 用户媒体下载</span>
+<span class="cmd">java</span> -jar x-media-downloader.jar <span class="flag">user</span> \
+  <span class="flag">--users</span> <span class="val">elonmusk,openai</span> \
+  <span class="flag">--config</span> <span class="val">config.yaml</span>
+
+<span class="cmt"># Tag / 高级搜索</span>
+<span class="cmd">java</span> -jar x-media-downloader.jar <span class="flag">tag</span> \
+  <span class="flag">--tag</span> <span class="val">"#example"</span> \
+  <span class="flag">--config</span> <span class="val">config.yaml</span>
+
+<span class="cmt"># 评论区</span>
+<span class="cmd">java</span> -jar x-media-downloader.jar <span class="flag">reply</span> \
+  <span class="flag">--tweet</span> <span class="val">https://x.com/user/status/123</span>
+      </div>
+    </section>
+
+    <!-- 架构 -->
+    <section>
+      <h2><span class="dot"></span>分层架构</h2>
+      <div class="arch">交互层   CLI (picocli) — user / tag / reply / text / profile
+    │
+任务层   TaskScheduler → UserMediaTask · TagSearchTask · ReplyTask …
+    │
+服务层   GraphQLClient · MediaDownloader · AccountPool · RateLimiter
+    │
+基础层   ConfigLoader · SQLite Storage · NamingTemplate · 日志</div>
+    </section>
+
+    <!-- 技术栈 -->
+    <section>
+      <h2><span class="dot"></span>技术栈</h2>
+      <div class="tags">
+        <span class="tag blue">Java 17+</span>
+        <span class="tag blue">OkHttp</span>
+        <span class="tag blue">Jackson</span>
+        <span class="tag green">SQLite</span>
+        <span class="tag green">picocli</span>
+        <span class="tag purple">SnakeYAML</span>
+        <span class="tag purple">SLF4J / Logback</span>
+        <span class="tag orange">CompletableFuture</span>
+      </div>
+    </section>
+
+    <!-- 模块卡片 -->
+    <section>
+      <h2><span class="dot"></span>主要模块</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="icon">🔌</div>
+          <h3>GraphQLClient</h3>
+          <p>封装请求、Cookie 认证、Transaction-ID、限流与重试，对接 X 非官方 GraphQL 接口。</p>
+        </div>
+        <div class="card">
+          <div class="icon">📋</div>
+          <h3>Task 体系</h3>
+          <p>统一 Task 接口，用户媒体、Tag、评论区、纯文本、主页等模式可独立扩展。</p>
+        </div>
+        <div class="card">
+          <div class="icon">⬇️</div>
+          <h3>MediaDownloader</h3>
+          <p>并发下载、命名模板、失败重试、进度回调，结果写入本地与 SQLite。</p>
+        </div>
+        <div class="card">
+          <div class="icon">👥</div>
+          <h3>AccountPool</h3>
+          <p>多账号 Cookie 管理与轮换，配合 RateLimiter 降低限流影响。</p>
+        </div>
+        <div class="card">
+          <div class="icon">💾</div>
+          <h3>Storage</h3>
+          <p>SQLite 记录 tweet_id + media_key，并以用户水位线支撑增量同步与断点续传。</p>
+        </div>
+        <div class="card">
+          <div class="icon">⚙️</div>
+          <h3>Config</h3>
+          <p>YAML 配置，支持账号、代理、并发、时间范围、命名模板等。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 文档 -->
+    <section>
+      <h2><span class="dot"></span>设计文档</h2>
+      <div class="docs">
+        <div class="doc-link">
+          <strong>需求分析</strong>
+          <span>目标、功能与非功能需求、阶段规划</span>
+        </div>
+        <div class="doc-link">
+          <strong>详细设计</strong>
+          <span>架构、模块、流程、GraphQL 约定</span>
+        </div>
+        <div class="doc-link">
+          <strong>类图说明</strong>
+          <span>核心类职责与依赖关系</span>
+        </div>
+        <div class="doc-link">
+          <strong>数据库结构</strong>
+          <span>表结构、索引、建表 SQL、ER 说明</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 阶段 -->
+    <section>
+      <h2><span class="dot"></span>实现阶段</h2>
+      <div class="grid">
+        <div class="card">
+          <h3 style="color: var(--green);">Phase 1 · MVP</h3>
+          <p>配置、Client、多账号 Cookie 池、日配额账本、UserMediaTask、Downloader（断点续传）、SQLite（水位线）、基础 CLI</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent2);">Phase 2 · 对齐</h3>
+          <p>代理（含代理池）、Tag / Reply / Text / Profile、进度与报告</p>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--purple);">Phase 3 · 打磨</h3>
+          <p>Transaction-ID 强化、配置校验与文档、打包与稳定性</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>X Media Downloader · Java 重写版设计文档配套页面</p>
+      <p style="margin-top: 6px;">基于 <a href="https://github.com/caolvchong-top/twitter_download" target="_blank" rel="noopener">twitter_download</a> 功能进行开发</p>
+      <p class="disclaimer">本工具仅供编程学习、学术研究与个人练习使用。请遵守 X 平台服务条款与相关法律法规，风险自担；下载内容的著作权归原作者与平台所有，不得用于侵权传播；Cookie 建议使用专用小号。页面为设计文档配套说明；操作台页面（console.html）为演示原型，不在本期交付范围。</p>
+    </footer>
+  </div>
+</body>
+</html>

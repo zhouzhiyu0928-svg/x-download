@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>操作台 · X Media Downloader</title>
+  <style>
+    :root {
+      --bg: #0a0e13;
+      --sidebar: #0e1319;
+      --surface: #141b24;
+      --surface2: #1a2330;
+      --border: #253041;
+      --border-hover: #3a4d66;
+      --text: #e7eef7;
+      --muted: #8494a8;
+      --faint: #5a6a7e;
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.15);
+      --accent-border: rgba(59,130,246,0.35);
+      --green: #34d399;
+      --green-dim: rgba(52,211,153,0.12);
+      --orange: #fbbf24;
+      --orange-dim: rgba(251,191,36,0.12);
+      --red: #f87171;
+      --red-dim: rgba(248,113,113,0.12);
+      --purple: #a78bfa;
+      --radius: 10px;
+      --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      --mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    .brand {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title .logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--faint);
+      margin-top: 4px;
+      margin-left: 36px;
+    }
+
+    .nav {
+      padding: 12px 10px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .nav-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--faint);
+      padding: 8px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      font-size: 13.5px;
+      font-family: inherit;
+      text-align: left;
+    }
+
+    .nav-item:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .nav-item .ni {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--faint);
+    }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100vh;
+    }
+
+    .topbar {
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: var(--sidebar);
+      flex-shrink: 0;
+    }
+
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .status-pill {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(52,211,153,0.25);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-content: start;
+    }
+
+    @media (max-width: 960px) {
+      .content { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+
+    /* ── Panels ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .panel.full {
+      grid-column: 1 / -1;
+    }
+
+    /* ── Form ── */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: var(--text);
+      font-size: 13.5px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .check-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      padding-top: 4px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .check-item input {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--border-hover);
+      color: var(--text);
+    }
+
+    .btn-danger {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(248,113,113,0.25);
+    }
+
+    .btn-danger:hover {
+      background: rgba(248,113,113,0.2);
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      margin-bottom: 12px;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--bg);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.35s ease;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-val.green { color: var(--green); }
+    .stat-val.orange { color: var(--orange); }
+    .stat-val.red { color: var(--red); }
+    .stat-val.blue { color: var(--accent); }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--faint);
+      margin-top: 2px;
+    }
+
+    /* ── Log ── */
+    .log-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      height: 260px;
+      overflow-y: auto;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .log-line {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line .ts { color: var(--faint); }
+    .log-line .info { color: var(--accent); }
+    .log-line .ok { color: var(--green); }
+    .log-line .warn { color: var(--orange); }
+    .log-line .err { color: var(--red); }
+
+    /* ── Task type tabs inside form ── */
+    .task-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .task-tab {
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .task-tab:hover {
+      border-color: var(--border-hover);
+      color: var(--text);
+    }
+
+    .task-tab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    .hint {
+      font-size: 11.5px;
+      color: var(--faint);
+      margin-top: 4px;
+    }
+
+    /* hidden panels by task */
+    .task-fields { display: none; }
+    .task-fields.active { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-title">
+        <div class="logo">X</div>
+        Media Downloader
+      </div>
+      <div class="brand-sub">Java · 操作台</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">任务</div>
+      <button class="nav-item active" data-view="download" onclick="switchView('download')">
+        <span class="ni">⬇</span> 下载任务
+      </button>
+      <button class="nav-item" data-view="history" onclick="switchView('history')">
+        <span class="ni">📋</span> 运行历史
+      </button>
+      <button class="nav-item" data-view="records" onclick="switchView('records')">
+        <span class="ni">💾</span> 下载记录
+      </button>
+      <div class="nav-label" style="margin-top:12px">系统</div>
+      <button class="nav-item" data-view="accounts" onclick="switchView('accounts')">
+        <span class="ni">👤</span> 账号管理
+      </button>
+      <button class="nav-item" data-view="settings" onclick="switchView('settings')">
+        <span class="ni">⚙</span> 设置
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      仅供学习研究使用<br />请遵守平台条款
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="pageTitle">下载任务</div>
+      <div class="topbar-actions">
+        <div class="status-pill" id="connStatus">
+          <span class="dot"></span>
+          就绪
+        </div>
+      </div>
+    </div>
+
+    <!-- Download View -->
+    <div class="content" id="view-download">
+      <!-- Left: Form -->
+      <div class="panel">
+        <div class="panel-header">
+          <span>任务配置</span>
+        </div>
+        <div class="panel-body">
+          <div class="task-tabs">
+            <button class="task-tab active" data-task="user" onclick="switchTask('user')">用户媒体</button>
+            <button class="task-tab" data-task="tag" onclick="switchTask('tag')">Tag / 搜索</button>
+            <button class="task-tab" data-task="reply" onclick="switchTask('reply')">评论区</button>
+            <button class="task-tab" data-task="text" onclick="switchTask('text')">纯文本</button>
+            <button class="task-tab" data-task="profile" onclick="switchTask('profile')">用户主页</button>
+          </div>
+
+          <!-- User -->
+          <div class="task-fields active" id="fields-user">
+            <div class="form-group">
+              <label>用户名（screen_name，多个用逗号分隔）</label>
+              <input type="text" id="users" placeholder="例如：elonmusk,openai" value="" />
+              <div class="hint">填写 @ 后面的部分，不要带 @</div>
+            </div>
+            <div class="form-group">
+              <label>时间范围</label>
+              <div class="row-2">
+                <input type="text" id="timeFrom" placeholder="开始 1990-01-01" value="1990-01-01" />
+                <input type="text" id="timeTo" placeholder="结束 2030-01-01" value="2030-01-01" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>选项</label>
+              <div class="check-row">
+                <label class="check-item"><input type="checkbox" id="hasVideo" checked /> 下载视频</label>
+                <label class="check-item"><input type="checkbox" id="hasRetweet" /> 包含转推</label>
+                <label class="check-item"><input type="checkbox" id="highLights" /> 仅亮点</label>
+                <label class="check-item"><input type="checkbox" id="incremental" checked /> 增量同步</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tag -->
+          <div class="task-fields" id="fields-tag">
+            <div class="form-group">
+              <label>Tag（可带 #）</label>
+              <input type="text" id="tag" placeholder="#example" />
+            </div>
+            <div class="form-group">
+              <label>高级搜索 filter（可选）</label>
+              <textarea id="filter" placeholder="从 x.com/search-advanced 复制搜索条件，双引号请改为单引号"></textarea>
+            </div>
+            <div class="form-group">
+              <div class="check-row">
+                <label class="check-item"><input type="checkbox" id="tagSaveText" checked /> 同时保存文本</label>
+                <label class="check-item"><input type="checkbox" id="tagVideo" checked /> 下载视频</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reply -->
+          <div class="task-fields" id="fields-reply">
+            <div class="form-group">
+              <label>用户名 或 推文链接</label>
+              <input type="text" id="replyTarget" placeholder="用户名 或 https://x.com/user/status/123" />
+            </div>
+            <div class="form-group">
+              <div class="check-row">
+                <label class="check-item"><input type="checkbox" id="replyVideo" checked /> 下载视频</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Text -->
+          <div class="task-fields" id="fields-text">
+            <div class="form-group">
+              <label>用户名（多个用逗号分隔）</label>
+              <input type="text" id="textUsers" placeholder="例如：elonmusk" />
+            </div>
+            <div class="form-group">
+              <label>时间范围</label>
+              <div class="row-2">
+                <input type="text" id="textFrom" placeholder="开始" value="1990-01-01" />
+                <input type="text" id="textTo" placeholder="结束" value="2030-01-01" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile -->
+          <div class="task-fields" id="fields-profile">
+            <div class="form-group">
+              <label>用户名（多个用逗号分隔）</label>
+              <input type="text" id="profileUsers" placeholder="例如：elonmusk,openai" />
+              <div class="hint">将下载头像、Banner 与简介</div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:14px">
+            <label>保存路径</label>
+            <input type="text" id="savePath" placeholder="./downloads" value="./downloads" />
+          </div>
+
+          <div class="form-group">
+            <label>最大并发</label>
+            <input type="number" id="concurrency" min="1" max="32" value="8" style="width:100px" />
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="btnStart" onclick="startTask()">▶ 开始任务</button>
+            <button class="btn btn-danger" id="btnStop" onclick="stopTask()" disabled>■ 停止</button>
+            <button class="btn btn-ghost" onclick="clearLog()">清空日志</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Progress + Log -->
+      <div style="display:flex; flex-direction:column; gap:20px">
+        <div class="panel">
+          <div class="panel-header">
+            <span>运行状态</span>
+            <span id="runState" style="font-size:12px;color:var(--faint);font-weight:400">空闲</span>
+          </div>
+          <div class="panel-body">
+            <div class="progress-wrap">
+              <div class="progress-meta">
+                <span id="progressText">等待开始</span>
+                <span id="progressPct">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+            </div>
+            <div class="stats">
+              <div class="stat">
+                <div class="stat-val blue" id="statTotal">0</div>
+                <div class="stat-label">总计</div>
+              </div>
+              <div class="stat">
+                <div class="stat-val green" id="statOk">0</div>
+                <div class="stat-label">成功</div>
+              </div>
+              <div class="stat">
+                <div class="stat-val orange" id="statSkip">0</div>
+                <div class="stat-label">跳过</div>
+              </div>
+              <div class="stat">
+                <div class="stat-val red" id="statFail">0</div>
+                <div class="stat-label">失败</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="flex:1">
+          <div class="panel-header">
+            <span>运行日志</span>
+          </div>
+          <div class="panel-body" style="padding:12px">
+            <div class="log-box" id="logBox">
+              <div class="log-line"><span class="ts">[系统]</span> <span class="info">操作台已就绪，配置任务后点击「开始任务」。</span></div>
+              <div class="log-line"><span class="ts">[提示]</span> 本页面为演示原型，不在本期交付范围；本期实际下载入口为命令行工具（CLI）。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other views (placeholder) -->
+    <div class="content" id="view-history" style="display:none">
+      <div class="panel full">
+        <div class="panel-header">运行历史</div>
+        <div class="panel-body">
+          <p style="color:var(--muted);font-size:13px">任务执行历史将显示在此处（对应 task_run 表）。连接后端后可查询最近运行记录、成功/失败统计与耗时。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="view-records" style="display:none">
+      <div class="panel full">
+        <div class="panel-header">下载记录</div>
+        <div class="panel-body">
+          <p style="color:var(--muted);font-size:13px">已下载媒体记录（download_record）将显示在此处，支持按用户筛选、查看失败项并重试。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="view-accounts" style="display:none">
+      <div class="panel full">
+        <div class="panel-header">账号管理</div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label>Cookie（auth_token 与 ct0）</label>
+            <textarea id="cookieInput" placeholder="auth_token=xxxx; ct0=yyyy;" style="min-height:100px"></textarea>
+            <div class="hint">从浏览器登录态中复制，请勿使用主账号；Cookie 仅保存在本地。</div>
+          </div>
+          <div class="actions" style="border:none;padding-top:0;margin-top:8px">
+            <button class="btn btn-primary btn-sm" onclick="log('info','已保存账号配置（演示，未实际上传）')">保存账号</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cookieInput').value=''">清空</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content" id="view-settings" style="display:none">
+      <div class="panel full">
+        <div class="panel-header">设置</div>
+        <div class="panel-body">
+          <div class="row-2">
+            <div class="form-group">
+              <label>默认保存路径</label>
+              <input type="text" value="./downloads" />
+            </div>
+            <div class="form-group">
+              <label>默认并发数</label>
+              <input type="number" value="8" min="1" max="32" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>代理（可选）</label>
+            <input type="text" placeholder="http://127.0.0.1:7890" />
+          </div>
+          <div class="form-group">
+            <label>命名模板</label>
+            <input type="text" value="{user}/{date}-{type}_{index}.{ext}" />
+            <div class="hint">可用变量：{user} {date} {tweetId} {type} {index} {ext}</div>
+          </div>
+          <div class="form-group">
+            <label>请求间隔（ms）</label>
+            <input type="number" value="500" style="width:120px" />
+          </div>
+          <div class="actions" style="border:none;padding-top:0">
+            <button class="btn btn-primary btn-sm" onclick="log('ok','设置已保存（演示）')">保存设置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentTask = 'user';
+    let running = false;
+    let timer = null;
+    let stats = { total: 0, ok: 0, skip: 0, fail: 0 };
+
+    const titles = {
+      download: '下载任务',
+      history: '运行历史',
+      records: '下载记录',
+      accounts: '账号管理',
+      settings: '设置'
+    };
+
+    function switchView(name) {
+      document.querySelectorAll('.content').forEach(el => el.style.display = 'none');
+      const v = document.getElementById('view-' + name);
+      if (v) v.style.display = name === 'download' ? 'grid' : 'grid';
+      document.getElementById('pageTitle').textContent = titles[name] || name;
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.view === name);
+      });
+    }
+
+    function switchTask(name) {
+      currentTask = name;
+      document.querySelectorAll('.task-tab').forEach(el => {
+        el.classList.toggle('active', el.dataset.task === name);
+      });
+      document.querySelectorAll('.task-fields').forEach(el => {
+        el.classList.toggle('active', el.id === 'fields-' + name);
+      });
+    }
+
+    function ts() {
+      const d = new Date();
+      return d.toTimeString().slice(0, 8);
+    }
+
+    function log(level, msg) {
+      const box = document.getElementById('logBox');
+      const cls = { info: 'info', ok: 'ok', warn: 'warn', err: 'err' }[level] || 'info';
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="ts">[${ts()}]</span> <span class="${cls}">${msg}</span>`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('logBox').innerHTML = '';
+      log('info', '日志已清空');
+    }
+
+    function setProgress(pct, text) {
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = Math.round(pct) + '%';
+      if (text) document.getElementById('progressText').textContent = text;
+    }
+
+    function updateStats() {
+      document.getElementById('statTotal').textContent = stats.total;
+      document.getElementById('statOk').textContent = stats.ok;
+      document.getElementById('statSkip').textContent = stats.skip;
+      document.getElementById('statFail').textContent = stats.fail;
+    }
+
+    function validate() {
+      if (currentTask === 'user') {
+        const u = document.getElementById('users').value.trim();
+        if (!u) { log('err', '请填写至少一个用户名'); return false; }
+      } else if (currentTask === 'tag') {
+        const t = document.getElementById('tag').value.trim();
+        const f = document.getElementById('filter').value.trim();
+        if (!t && !f) { log('err', '请填写 Tag 或高级搜索条件'); return false; }
+      } else if (currentTask === 'reply') {
+        if (!document.getElementById('replyTarget').value.trim()) {
+          log('err', '请填写用户名或推文链接'); return false;
+        }
+      } else if (currentTask === 'text') {
+        if (!document.getElementById('textUsers').value.trim()) {
+          log('err', '请填写用户名'); return false;
+        }
+      } else if (currentTask === 'profile') {
+        if (!document.getElementById('profileUsers').value.trim()) {
+          log('err', '请填写用户名'); return false;
+        }
+      }
+      return true;
+    }
+
+    function startTask() {
+      if (running) return;
+      if (!validate()) return;
+
+      running = true;
+      stats = { total: 0, ok: 0, skip: 0, fail: 0 };
+      updateStats();
+      setProgress(0, '任务启动中…');
+      document.getElementById('btnStart').disabled = true;
+      document.getElementById('btnStop').disabled = false;
+      document.getElementById('runState').textContent = '运行中';
+      document.getElementById('runState').style.color = 'var(--green)';
+      document.getElementById('connStatus').innerHTML = '<span class="dot"></span> 运行中';
+
+      const taskNames = {
+        user: '用户媒体下载',
+        tag: 'Tag / 搜索下载',
+        reply: '评论区下载',
+        text: '纯文本获取',
+        profile: '用户主页下载'
+      };
+
+      log('info', `开始任务：${taskNames[currentTask]}`);
+      log('info', `保存路径：${document.getElementById('savePath').value || './downloads'}`);
+      log('info', `并发数：${document.getElementById('concurrency').value || 8}`);
+
+      // 模拟进度（前端演示）
+      let step = 0;
+      const totalSteps = 24;
+      stats.total = totalSteps;
+      updateStats();
+
+      timer = setInterval(() => {
+        if (!running) return;
+        step++;
+        const pct = (step / totalSteps) * 100;
+        const r = Math.random();
+        if (r < 0.75) {
+          stats.ok++;
+          log('ok', `下载成功  media_${String(step).padStart(3, '0')}`);
+        } else if (r < 0.9) {
+          stats.skip++;
+          log('warn', `跳过（已存在） media_${String(step).padStart(3, '0')}`);
+        } else {
+          stats.fail++;
+          log('err', `下载失败  media_${String(step).padStart(3, '0')} — 网络超时`);
+        }
+        updateStats();
+        setProgress(pct, `处理中 ${step}/${totalSteps}`);
+
+        if (step >= totalSteps) {
+          finishTask(true);
+        }
+      }, 280);
+    }
+
+    function stopTask() {
+      if (!running) return;
+      log('warn', '用户请求停止任务…');
+      finishTask(false);
+    }
+
+    function finishTask(completed) {
+      running = false;
+      if (timer) { clearInterval(timer); timer = null; }
+      document.getElementById('btnStart').disabled = false;
+      document.getElementById('btnStop').disabled = true;
+      document.getElementById('runState').textContent = completed ? '已完成' : '已停止';
+      document.getElementById('runState').style.color = completed ? 'var(--green)' : 'var(--orange)';
+      document.getElementById('connStatus').innerHTML = '<span class="dot"></span> 就绪';
+      if (completed) {
+        setProgress(100, '任务完成');
+        log('ok', `任务结束 — 成功 ${stats.ok} · 跳过 ${stats.skip} · 失败 ${stats.fail}`);
+      } else {
+        setProgress((stats.ok + stats.skip + stats.fail) / Math.max(stats.total, 1) * 100, '已停止');
+        log('warn', '任务已停止');
+      }
+    }
+  </script>
+</body>
+</html>

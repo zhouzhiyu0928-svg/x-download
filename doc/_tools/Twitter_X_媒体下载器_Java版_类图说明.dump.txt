@@ -1,0 +1,168 @@
+P000 [(none)] 
+P001 [(none)] Twitter/X 媒体下载器
+P002 [(none)] Java 重写版  类图说明
+P003 [(none)] 基于详细设计文档整理
+P004 [(none)] 版本：V1.0    日期：2026-10-12
+P005 [Heading 1] 1. 文档说明
+P006 [(none)] 本文档对系统核心类的职责、主要属性与方法、以及类之间的关系进行说明，作为详细设计的补充，便于开发时理解对象协作方式。类图以文字 + 关系描述形式呈现，可直接用于绘制 UML 类图或指导编码。
+P007 [Heading 1] 2. 总体类关系概览
+P008 [(none)] 系统核心协作关系可概括为：
+P009 [(none)] • CLI 命令类创建并配置 Task，交给 TaskScheduler 执行。
+P010 [(none)] • Task 通过 TaskContext 使用 GraphQLClient、MediaDownloader、DownloadRecordRepository 等。
+P011 [(none)] • GraphQLClient 依赖 AccountPool、RateLimiter、TransactionIdGenerator 完成请求。
+P012 [(none)] • MediaDownloader 依赖 NamingTemplate 生成路径，并将结果写入 Repository。
+P013 [(none)] • 配置由 ConfigLoader 加载为 AppConfig，注入到各组件。
+P014 [Heading 1] 3. 交互层类
+P015 [Heading 2] 3.1 MainCommand / 各子命令
+P016 [(none)] 职责：解析命令行参数，加载配置，组装依赖，创建对应 Task 并提交 TaskScheduler。
+TABLE0 rows=7 cols=2
+   R00 | 类名 | 说明
+   R01 | MainCommand | 根命令，注册子命令（user / tag / reply / text / profile）
+   R02 | UserCommand | 用户媒体下载子命令，参数：users、has-retweet、time-range 等
+   R03 | TagCommand | Tag / 高级搜索子命令，参数：tag、filter 等
+   R04 | ReplyCommand | 评论区下载子命令，参数：user 或 tweet-url
+   R05 | TextCommand | 纯文本获取子命令
+   R06 | ProfileCommand | 用户主页信息下载子命令
+P017 [(none)] 关系：各 Command 依赖 ConfigLoader、TaskScheduler；创建具体 Task 实例。
+P018 [Heading 1] 4. 配置相关类
+P019 [Heading 2] 4.1 ConfigLoader
+P020 [(none)] 职责：读取 YAML 配置文件，合并默认值与环境变量，执行校验，返回 AppConfig。
+P021 [(none)] 主要方法：
+P022 [(none)]   AppConfig load(String path)
+P023 [(none)]   void validate(AppConfig config)
+P024 [Heading 2] 4.2 AppConfig
+P025 [(none)] 职责：强类型配置对象，承载所有运行参数。
+P026 [(none)] 主要属性（示例）：
+P027 [(none)]   String savePath
+P028 [(none)]   List<AccountConfig> accounts
+P029 [(none)]   ProxyConfig proxy
+P030 [(none)]   DownloadConfig download   // maxConcurrent, hasVideo, hasRetweet, timeRange, namingTemplate, enableIncremental ...
+P031 [(none)]   RateLimitConfig rateLimit
+P032 [(none)] 关系：被 ConfigLoader 创建；被 TaskContext、GraphQLClient、MediaDownloader 等读取。
+P033 [Heading 1] 5. 客户端与账号相关类
+P034 [Heading 2] 5.1 GraphQLClient
+P035 [(none)] 职责：封装对 X GraphQL 接口的调用，统一处理 Header、认证、Transaction-ID、限流与基础重试。
+P036 [(none)] 主要依赖：
+P037 [(none)]   AccountPool accountPool
+P038 [(none)]   RateLimiter rateLimiter
+P039 [(none)]   TransactionIdGenerator txIdGenerator
+P040 [(none)]   OkHttpClient httpClient
+P041 [(none)] 主要方法：
+P042 [(none)]   <T> T execute(String operation, String queryId, Map<String,Object> variables, Class<T> type)
+P043 [(none)]   JsonNode executeRaw(String operation, String queryId, Map<String,Object> variables)
+P044 [(none)] 关系：被各 Task 通过 TaskContext 使用；依赖 AccountPool、RateLimiter、TransactionIdGenerator。
+P045 [Heading 2] 5.2 TransactionIdGenerator
+P046 [(none)] 职责：生成 X-Client-Transaction-ID，实现可替换。
+P047 [(none)] 主要方法：
+P048 [(none)]   String generate(String path, String method)
+P049 [(none)] 关系：被 GraphQLClient 调用；可有默认实现与备用实现。
+P050 [Heading 2] 5.3 Account
+P051 [(none)] 职责：表示一个登录账号及其状态。
+P052 [(none)] 主要属性：
+P053 [(none)]   String name
+P054 [(none)]   String cookie / authToken / ct0
+P055 [(none)]   AccountStatus status   // AVAILABLE / RATE_LIMITED / INVALID
+P056 [(none)]   Instant lastUsedAt / cooldownUntil
+P057 [Heading 2] 5.4 AccountPool
+P058 [(none)] 职责：管理多账号，提供获取、释放、标记限流/失效等能力。
+P059 [(none)] 主要方法：
+P060 [(none)]   Account acquire()
+P061 [(none)]   void release(Account account)
+P062 [(none)]   void markRateLimited(Account account, Duration cooldown)
+P063 [(none)]   void markInvalid(Account account)
+P064 [(none)] 关系：持有多个 Account；被 GraphQLClient 使用。
+P065 [Heading 2] 5.5 RateLimiter
+P066 [(none)] 职责：控制请求并发与最小间隔，处理 Rate Limit 退避。
+P067 [(none)] 主要方法：
+P068 [(none)]   void acquire() throws InterruptedException
+P069 [(none)]   void release()
+P070 [(none)]   void onRateLimited(Duration backoff)
+P071 [(none)] 关系：被 GraphQLClient 在发请求前后调用；可与 AccountPool 协同。
+P072 [Heading 1] 6. 任务体系类
+P073 [Heading 2] 6.1 Task（接口）
+P074 [(none)]   String name()
+P075 [(none)]   void execute(TaskContext context) throws Exception
+P076 [Heading 2] 6.2 AbstractTask
+P077 [(none)] 职责：提供公共逻辑（进度回调、异常包装、通用过滤等），供具体 Task 继承。
+P078 [(none)] 关系：实现 Task；被 UserMediaTask 等继承。
+P079 [Heading 2] 6.3 具体 Task 类
+TABLE1 rows=6 cols=2
+   R00 | 类名 | 职责与要点
+   R01 | UserMediaTask | 按用户拉取媒体时间线；支持排除转推、亮点、喜欢、时间范围；解析 MediaItem 列表并交给 Downloader
+   R02 | TagSearchTask | 按 Tag 或高级搜索 filter 拉取结果；可同时保存文本
+   R03 | ReplyTask | 按用户或推文链接拉取评论区媒体
+   R04 | TextTask | 拉取纯文本推文并落盘
+   R05 | ProfileTask | 获取并保存用户头像、banner、简介
+P080 [(none)] 关系：均实现/继承 Task；通过 TaskContext 访问 Client、Downloader、Repository。
+P081 [Heading 2] 6.4 TaskContext
+P082 [(none)] 职责：向 Task 注入运行时依赖，避免 Task 直接依赖全局单例。
+P083 [(none)] 主要属性：
+P084 [(none)]   AppConfig config
+P085 [(none)]   GraphQLClient client
+P086 [(none)]   MediaDownloader downloader
+P087 [(none)]   DownloadRecordRepository repository
+P088 [(none)]   ProgressCallback progressCallback
+P089 [Heading 2] 6.5 TaskScheduler
+P090 [(none)] 职责：接收一个或多个 Task，按策略调度执行，汇总结果并输出统计。
+P091 [(none)] 主要方法：
+P092 [(none)]   TaskResult run(Task task)
+P093 [(none)]   List<TaskResult> runAll(List<Task> tasks)
+P094 [(none)] 关系：被 CLI 调用；创建 TaskContext 并执行 Task。
+P095 [Heading 1] 7. 下载与存储相关类
+P096 [Heading 2] 7.1 MediaDownloader
+P097 [(none)] 职责：并发下载媒体文件，应用命名模板，更新下载记录，支持重试与进度回调。
+P098 [(none)] 主要依赖：
+P099 [(none)]   NamingTemplate namingTemplate
+P100 [(none)]   DownloadRecordRepository repository
+P101 [(none)]   ExecutorService executor
+P102 [(none)] 主要方法：
+P103 [(none)]   DownloadSummary download(List<MediaItem> items, ProgressCallback callback)
+P104 [Heading 2] 7.2 NamingTemplate
+P105 [(none)] 职责：根据模板字符串与上下文变量渲染文件相对路径。
+P106 [(none)] 主要方法：
+P107 [(none)]   String render(MediaItem item, Map<String,String> extra)
+P108 [(none)] 支持变量示例：{user} {date} {tweetId} {type} {index} {ext}
+P109 [Heading 2] 7.3 DownloadRecordRepository
+P110 [(none)] 职责：封装对 download_record 表的访问，提供增量判断与状态更新。
+P111 [(none)] 主要方法：
+P112 [(none)]   boolean exists(String tweetId, String mediaUrl)
+P113 [(none)]   void save(DownloadRecord record)
+P114 [(none)]   List<DownloadRecord> listFailed()
+P115 [(none)]   void clearByUser(String screenName)
+P116 [Heading 2] 7.4 Database
+P117 [(none)] 职责：管理 SQLite 连接与建表，供 Repository 使用。
+P118 [(none)] 关系：被 DownloadRecordRepository 依赖。
+P119 [Heading 1] 8. 领域模型类
+TABLE2 rows=7 cols=2
+   R00 | 类名 | 说明
+   R01 | User | 用户信息：screenName、restId、name、avatarUrl、bannerUrl、description 等
+   R02 | Tweet | 推文：tweetId、text、createdAt、user、mediaItems、isRetweet、metrics 等
+   R03 | MediaItem | 单条媒体：url、type（image/video/gif）、tweetId、userScreenName、index 等
+   R04 | DownloadRecord | 下载记录：对应数据库表字段，含 status、localPath、downloadedAt 等
+   R05 | TaskResult | 任务执行结果：成功数、失败数、跳过数、耗时、失败列表等
+   R06 | DownloadSummary | 一次下载批次的汇总信息
+P120 [(none)] 关系：Tweet 包含多个 MediaItem；User 与 Tweet 关联；DownloadRecord 由 MediaItem 下载结果生成。
+P121 [Heading 1] 9. 关键关系汇总（便于画图）
+P122 [(none)] 依赖 / 使用关系（箭头方向：调用方 → 被用方）：
+P123 [(none)] • MainCommand / UserCommand 等  →  ConfigLoader、TaskScheduler
+P124 [(none)] • TaskScheduler  →  Task、TaskContext
+P125 [(none)] • TaskContext  →  AppConfig、GraphQLClient、MediaDownloader、DownloadRecordRepository
+P126 [(none)] • UserMediaTask 等  →  TaskContext（进而使用 Client / Downloader / Repository）
+P127 [(none)] • GraphQLClient  →  AccountPool、RateLimiter、TransactionIdGenerator、OkHttpClient
+P128 [(none)] • AccountPool  →  Account（1 对多）
+P129 [(none)] • MediaDownloader  →  NamingTemplate、DownloadRecordRepository
+P130 [(none)] • DownloadRecordRepository  →  Database
+P131 [(none)] • Tweet  →  MediaItem（1 对多）；DownloadRecord 由 MediaItem 衍生
+P132 [(none)] 继承关系：
+P133 [(none)] • AbstractTask 实现 Task
+P134 [(none)] • UserMediaTask、TagSearchTask、ReplyTask、TextTask、ProfileTask 继承 AbstractTask
+P135 [Heading 1] 10. 建议类图画图顺序
+P136 [(none)] 1. 先画任务体系：Task «interface» ← AbstractTask ← 五个具体 Task，以及 TaskContext、TaskScheduler。
+P137 [(none)] 2. 再画服务层：GraphQLClient 及其依赖的 AccountPool、Account、RateLimiter、TransactionIdGenerator。
+P138 [(none)] 3. 然后画下载与存储：MediaDownloader、NamingTemplate、DownloadRecordRepository、Database。
+P139 [(none)] 4. 补充领域模型：User、Tweet、MediaItem、DownloadRecord、TaskResult。
+P140 [(none)] 5. 最后用依赖箭头把 CLI → Scheduler → Task → Context → Client/Downloader/Repository 串起来。
+P141 [Heading 1] 11. 补充说明
+P142 [(none)] 以上类名与方法为设计阶段约定，实现时可按实际需要微调，但建议保持模块边界与核心职责不变。绘制 UML 时，可将“依赖”表示为虚线箭头，继承为实线空心三角，接口实现为虚线空心三角。若需要 PlantUML / Mermaid 源码版本，可在此说明基础上再生成一版文本图。
+P143 [(none)] 
+P144 [(none)] — 文档结束 —

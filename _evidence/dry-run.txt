@@ -1,0 +1,20 @@
+=== 配置 ===
+  保存目录   : ./downloads
+  数据库     : D:/x down/_evidence/demo.db
+  日志       : level=INFO file=D:/x down/_evidence/demo.log max-history=7
+  账号       : 1 个 → [account1(本人)]
+  代理       : SINGLE http://127.0.0.1:10808
+  并发/间隔  : 8 / 500ms，最大重试 3
+  命名模板   : {user}/{date}_{tweetId}_{mediaKey}.{ext}
+  增量/续传  : incremental=true resume=true video-variant=HIGHEST
+  配额       : 每账号每日 1000 次，预留重试 50，估算系数 19 条/次
+=== 数据库 ===
+  文件       : D:\x down\_evidence\demo.db
+  结构版本   : 1
+  journal    : wal（期望 wal）
+  表         : {download_record=0, quota_ledger=0, schema_version=1, sync_cursor=0, task_run=0, user_profile=0}
+=== 配额 ===
+  可用配额   : 1000 次调用（≈ 19000 条推文）
+  估算       : 推文 300 条 ÷ 19 条/次 ⇒ 需要 16 次调用；可用 1000 次 ⇒ 充足
+
+dry-run：未发起任何网络请求。

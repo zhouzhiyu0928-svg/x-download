@@ -1,0 +1,59 @@
+# X 媒体下载器 配置示例（复制为 config.yaml 后修改）
+# 优先级：CLI 参数 ＞ 环境变量（XMEDIA_*）＞ 本文件 ＞ 内置默认值
+# 免责声明：本工具仅供编程学习、学术研究与个人练习使用；下载内容著作权归原作者与平台所有。
+
+save-path: "./downloads"                 # 媒体保存目录
+db-path: "./data/xmedia.db"              # SQLite 数据库文件
+
+log:
+  level: INFO                            # ERROR / WARN / INFO / DEBUG
+  file: "./logs/xmedia.log"
+  max-history: 7                         # 日志保留天数
+
+accounts:                                # 至少一个；likes/亮点 任务必须用本人账号（note 标注）
+  - name: account1
+    note: "本人账号（likes / 亮点 任务必须绑定）"
+    cookie: "auth_token=替换为你的值; ct0=替换为你的值;"
+
+proxy:
+  mode: single                           # single | pool（pool 为预留，第一阶段只用 single）
+  list:
+    - "http://127.0.0.1:10808"
+
+download:
+  max-concurrent: 8                      # 并发下载数（1..64）
+  has-video: true                        # 是否下载视频
+  has-retweet: false                     # 是否包含转推（会显著增加调用配额消耗）
+  has-highlights: false                  # 仅亮点（与 likes 互斥）
+  likes: false                           # 仅下载该账号点过赞的推文（与 has-retweet/has-highlights 互斥）
+  time-range: "1990-01-01:2030-01-01"    # 含结束当天
+  naming-template: "{user}/{date}_{tweetId}_{mediaKey}.{ext}"   # {index} 仅本轮有效，勿用于持久命名
+  enable-incremental: true               # 增量：只处理新推文（配合水位线）
+  video-variant: highest                 # highest | all | lowest
+  image-format: orig                     # orig（原图）| 4096x4096 | jpg | png（对齐原版 image_format）
+  resume-enabled: true                   # 断点续传：*.part 临时文件 + 校验后原子改名
+
+tasks:                                   # 各任务类型专属参数
+  tag:
+    filter: ""                           # 空 | filter:images | filter:videos | filter:media | filter:links | filter:native_video
+    product: Latest                      # Latest | Top
+    save-text: false                     # Tag 任务是否同时保存推文文本
+    page-size: 20
+  reply:
+    include-video: true                  # 评论区任务是否下载视频
+    page-size: 20
+  text:
+    page-size: 20
+  profile:
+    download-avatar: true
+    download-banner: true
+    save-description: true
+
+rate-limit:
+  request-interval-ms: 500               # 请求最小间隔
+  max-retries: 3                         # 单次请求最大重试次数
+
+quota:
+  per-account-daily: 0                   # 账号每日 GraphQL 调用上限；0 = 不限制（默认不限次数）
+  reserve-for-retry: 50                  # 为失败重试预留
+  estimate-tweets-per-call: 19           # 启动前估算：调用次数 ≈ 推文数 / 该值

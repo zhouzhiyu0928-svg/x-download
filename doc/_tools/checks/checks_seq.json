@@ -1,0 +1,6 @@
+{
+  "存在": ["V1.1", "12. 文档效力与修订记录", "7.4 每日调用配额耗尽（与频率限流区分）",
+           "AppBootstrap", "QuotaLedger", "accountBinding", "sync_cursor", "Range 续传",
+           "在 finally 中释放", "markQuotaExhausted", "acquire(task.accountBinding)", "mediaKey"],
+  "不存在": ["V1.0", "Repository.exists(tweetId, mediaUrl)", "execute(operation, queryId"]
+}

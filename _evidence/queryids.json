@@ -1,0 +1,314 @@
+{
+  "AddContentDisclosure": [
+    "D1nwFlsu_qHsX92YzoRaaA"
+  ],
+  "AuthenticatePeriscope": [
+    "r7VUmxbfqNkx7uwjgONSNw"
+  ],
+  "getAltTextPromptPreference": [
+    "PFIxTk8owMoZgiMccP0r4g"
+  ],
+  "updateAltTextPromptPreference": [
+    "aQKrduk_DA46XfOQDkcEng"
+  ],
+  "ViewerBadgeCounts": [
+    "q4Npr1-FYRWyXsRzPckwEA"
+  ],
+  "BlockedAccountsAll": [
+    "9gQUtZmRLsKAsGCedwML0g"
+  ],
+  "BlockedAccountsImported": [
+    "hM_geO3VhVPapTRoGmFEog"
+  ],
+  "BlueVerifiedFollowers": [
+    "1fjk4lmK45a-giaZTubqbg"
+  ],
+  "BookmarkSearchTimeline": [
+    "VxJMx0-NXe-GO_4jC1lNhw"
+  ],
+  "CommunityMemberRelationshipTypeahead": [
+    "6YgvBKI7c3YZ9d7zKKojng"
+  ],
+  "CommunityUserRelationshipTypeahead": [
+    "MOKE3VjNMJ7BVsWdNkv32g"
+  ],
+  "ConnectTabTimeline": [
+    "IMQS8zyOjCLnWBkm6wNcQg"
+  ],
+  "ConversationControlChange": [
+    "57WYJNnWH0vM3Ip_gm8B2g"
+  ],
+  "ConversationControlDelete": [
+    "OoMO_aSZ1ZXjegeamF9QmA"
+  ],
+  "CreateBookmark": [
+    "aoDbu3RHznuiSkQ9aNM67Q"
+  ],
+  "CreateHighlight": [
+    "7jEc7ECTTDcNaqsMhjTxXg"
+  ],
+  "CreateNoteTweet": [
+    "H7QXYuKegEKuUJvkuW5_dg"
+  ],
+  "CreateRetweet": [
+    "mbRO74GrOvSfRcJnlMapnQ"
+  ],
+  "CreateTweet": [
+    "wR5Z_lEibLvkew3tF9w-Sg"
+  ],
+  "DataSaverMode": [
+    "xF6sXnKJfS2AOylzxRjf6A"
+  ],
+  "WriteDataSaverPreferences": [
+    "H03etWvZGz41YASxAU2YPg"
+  ],
+  "DeleteBookmark": [
+    "Wlmlj2-xzyS1GN3a6cj-mQ"
+  ],
+  "DeleteContentDisclosure": [
+    "YeIV-eqGwEZXDtYaDsJz2Q"
+  ],
+  "DeleteHighlight": [
+    "ea-VVDSLIEYNY2_2aPg3Uw"
+  ],
+  "DeleteRetweet": [
+    "ZyZigVsNiFO6v1dEks1eWg"
+  ],
+  "DeleteTweet": [
+    "nxpZCY2K-I6QoFHAHeojFQ"
+  ],
+  "DisableVerifiedPhoneLabel": [
+    "g2m0pAOamawNtVIfjXNMJg"
+  ],
+  "dmBlockUser": [
+    "IYw9u1KEhrS-t-BXsau4Uw"
+  ],
+  "DmNsfwMediaFilterUpdate": [
+    "of_N6O33zfyD4qsFJMYFxA"
+  ],
+  "dmUnblockUser": [
+    "Krbs6Nak_o7liWQwfV1jOQ"
+  ],
+  "DownvoteTweet": [
+    "Iu4kUV4vd_iHMupiHPPrAQ"
+  ],
+  "EnableVerifiedPhoneLabel": [
+    "C3RJFfMsb_KcEytpKmRRkw"
+  ],
+  "ExplorePage": [
+    "BMib5Px-wibex8mYlOUhmQ"
+  ],
+  "ExploreSidebar": [
+    "bY118dk8ns_5JzfzIMeiBw"
+  ],
+  "FavoriteTweet": [
+    "lI07N6Otwv1PhnEgXILM7A"
+  ],
+  "FinanceSearchTags": [
+    "4VTsYZ3r4xYW9S0Rys5G0A"
+  ],
+  "Followers": [
+    "stpzFPAIZ2qv8s2lRzPOnQ"
+  ],
+  "FollowersYouKnow": [
+    "479-dF4nq3sH1uu0n4Wdxg"
+  ],
+  "Following": [
+    "ath0FIohYC_c3Hj3SsxoCg"
+  ],
+  "GenericTimelineById": [
+    "cW93hZ3nlNYbYcUROF5r5A"
+  ],
+  "GetUsernameAvailabilityAndSuggestions": [
+    "1bMz-9lPrmIXrhFmXntTHw"
+  ],
+  "GlobalCommunitiesLatestPostSearchTimeline": [
+    "XtgLdT7L-zyrDDKH2dO0lw"
+  ],
+  "GlobalCommunitiesPostSearchTimeline": [
+    "z3OlkLD0_MFgCvUXcN1XeA"
+  ],
+  "Likes": [
+    "mu4us66Q6RRNOywVQhGtRg"
+  ],
+  "ListSearchTimeline": [
+    "9kXBVnbdRxymiEvafaXCQA"
+  ],
+  "MediaTabVideoMixer": [
+    "cbgcKS_qpavOmwMyWy6Ufg"
+  ],
+  "ModerateTweet": [
+    "pjFnHGVqCjTcZol0xcBJjw"
+  ],
+  "ModeratedTimeline": [
+    "8WssE8nvyh6zLlc8G9kOCQ"
+  ],
+  "MutedAccounts": [
+    "_p01XKzLM3kfwiW0ptPByw"
+  ],
+  "PaymentsUsersTypeahead": [
+    "dlHFEO5q9vveDgITz9zELg"
+  ],
+  "PinTimeline": [
+    "qaz5JhPxqI3UqAgkTpsGyQ"
+  ],
+  "PinTweet": [
+    "VIHsNu89pK-kW35JpHq7Xw"
+  ],
+  "PinnableTimelines": [
+    "HQ-MFOr09c_gbFjDGPJn-w"
+  ],
+  "PinnedTimelines": [
+    "8J1r9u3VjUveEdTY4WUTwQ"
+  ],
+  "ProfileFilter": [
+    "e-9v4-3Y6VwNrg31xgDYfQ"
+  ],
+  "ProfileUserPhoneState": [
+    "5kUWP8C1hcd6omvg6HXXTQ"
+  ],
+  "PutClientEducationFlag": [
+    "IjQ-egg0uPkY11NyPMfRMQ"
+  ],
+  "RemoveFollower": [
+    "QpNfg0kpPRfjROQ_9eOLXA"
+  ],
+  "SearchTimeline": [
+    "irezafrnzav4Ulf1vDkEBg"
+  ],
+  "SharingAudiospacesListeningDataWithFollowersUpdate": [
+    "5h0kNbk3ii97rmfY6CdgAA"
+  ],
+  "SimilarPosts": [
+    "o1hIGXCGvgeFbR-EV8oqVw"
+  ],
+  "SuperFollowers": [
+    "ETUYtgt-7ODFW0rEfuI8RA"
+  ],
+  "SupportedLanguages": [
+    "fZ5uZVeledO5SAseKnmTUg"
+  ],
+  "timelinesFeedback": [
+    "vfVbgvTPTQ-dF_PQ5lD1WQ"
+  ],
+  "TrendHistory": [
+    "Z1kaoaqgNPpRRoXHK6OPug"
+  ],
+  "TrendRelevantUsers": [
+    "mVoSlW4Ep91zz-pNhkLH0Q"
+  ],
+  "TVHomeMixer": [
+    "BMTYddUdvimu_voVh12qWw"
+  ],
+  "TweetDetail": [
+    "3BlMtudy4N-d78ch7zTLZQ"
+  ],
+  "TweetResultByRestId": [
+    "xZfFqfOmKQu_OXekGI59mg"
+  ],
+  "TweetResultsByRestIds": [
+    "aiX7QIJ4jp1QR8wT32vkHQ"
+  ],
+  "UndoDownvoteTweet": [
+    "yqhcbdyy59k-FCwOysvvGQ"
+  ],
+  "UnfavoriteTweet": [
+    "ZYKSe-w7KEslx3JhSIk5LA"
+  ],
+  "UnmentionUserFromConversation": [
+    "xVW9j3OqoBRY9d6_2OONEg"
+  ],
+  "UnmoderateTweet": [
+    "pVSyu6PA57TLvIE4nN2tsA"
+  ],
+  "UnpinTimeline": [
+    "u_Nxpj-y-PoTFHEM9saz2Q"
+  ],
+  "UnpinTweet": [
+    "BhKei844ypCyLYCg0nwigw"
+  ],
+  "UpdatePinnedTimelines": [
+    "J6-7gyMkcVWna0u0KkPU7g"
+  ],
+  "Upsells": [
+    "Sg3BvwapuCMIjLJ7LGPhMA"
+  ],
+  "UrtFixtures": [
+    "0MAr19lWhBkKwNGHtK5BrQ"
+  ],
+  "UserArticlesTweets": [
+    "G9ehBUadUrsNfz-XnAcV4A"
+  ],
+  "UserBusinessProfileTeamTimeline": [
+    "JyMBv5W5h6A_TWJk398yoA"
+  ],
+  "UserByRestId": [
+    "mxaYWwt52eAb6OAzYHMVzg"
+  ],
+  "UserByScreenName": [
+    "AMIBMjtxEEATh4z8V9GtRg"
+  ],
+  "GetUserClaims": [
+    "AqTNiqohgRK_0DarLzqUvg"
+  ],
+  "UserCreatorSubscribers": [
+    "WdOv4T4CRGozks_e4iIpKw"
+  ],
+  "UserCreatorSubscriptions": [
+    "hoDpKXk4ulppcM8ReGNLlQ"
+  ],
+  "UserHighlightsTweets": [
+    "Ducf_uu7enyuuE2kjOwFcw"
+  ],
+  "UserMedia": [
+    "QWOimofaocjeRda7Tm5pNA"
+  ],
+  "UserOriginalsTimeline": [
+    "QLGv_wL7wziqsHhU0K100w"
+  ],
+  "UserPhotoTimeline": [
+    "sa-ZQ0jW0FT_VnNKT1PtYg"
+  ],
+  "UserPreferences": [
+    "xFxU-O8hEYe74ovNVU74jA"
+  ],
+  "UserPromotableTweets": [
+    "ajc72R9dmILUYBcF5JlzBA"
+  ],
+  "UserPromotedTweets": [
+    "tY-UcVvOU284pAfE_Y004w"
+  ],
+  "UserRepliesTimeline": [
+    "X9Te-FyiGcoV2qNrnx9w3w"
+  ],
+  "UserRepostsTimeline": [
+    "jVw4ob-dDfVzoaz2G6NpVA"
+  ],
+  "UserSessionsList": [
+    "vJ-XatpmQSG8bDch8-t9Jw"
+  ],
+  "UserSuperFollowTweets": [
+    "SgMBGaLeFpBoPYftpsn8fw"
+  ],
+  "UserTweets": [
+    "7_KBXBpG0zBPRN6UCIV0-w"
+  ],
+  "UserTweetsAndReplies": [
+    "bnsYxFljT6y98rFwiGr3fw"
+  ],
+  "UserVideoTimeline": [
+    "oAFGPinlLUFMoa3u70mnAw"
+  ],
+  "UsersByRestIds": [
+    "ubfbnAM4qTlMTOYleYhXSg"
+  ],
+  "UsersByScreenNames": [
+    "cACg_kWQkzNQ74lcK5rksQ"
+  ],
+  "UsersVerifiedAvatars": [
+    "O9O_O1iF0QffoOBjB2OGIQ"
+  ],
+  "Viewer": [
+    "TpQxQtWMTMnIAMPlMGMqNw"
+  ]
+}

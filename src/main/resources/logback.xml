@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss} %-5level %logger{20} - %msg%n</pattern>
+      <charset>UTF-8</charset>
+    </encoder>
+  </appender>
+
+  <!-- 敏感信息（完整 Cookie）一律不得进日志：相关类只允许打印账号 name 与错误类型 -->
+  <logger name="com.xmedia.downloader" level="INFO"/>
+  <logger name="okhttp3" level="WARN"/>
+  <logger name="org.sqlite" level="WARN"/>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+</configuration>

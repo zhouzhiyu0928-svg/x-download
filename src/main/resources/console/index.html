@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>操作台 · X Media Downloader</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --fg: #e6e9ef; --muted: #9aa3b2; --accent: #1d9bf0; --ok: #3fb950;
+    --warn: #d29922; --err: #f85149;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .layout { display: flex; min-height: 100vh; }
+  .nav { width: 190px; flex: 0 0 190px; background: var(--panel); border-right: 1px solid var(--line);
+         padding: 18px 12px; position: sticky; top: 0; height: 100vh; overflow: auto; }
+  .brand { font-weight: 700; font-size: 15px; padding: 0 8px 4px; }
+  .brand small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
+  .nav-label { color: var(--muted); font-size: 11px; margin: 16px 8px 6px; letter-spacing: .08em; }
+  .nav-item { display: block; width: 100%; text-align: left; padding: 9px 10px; margin-bottom: 4px;
+              background: transparent; color: var(--fg); border: 1px solid transparent; border-radius: 8px;
+              cursor: pointer; font-size: 13px; }
+  .nav-item:hover { background: var(--panel2); }
+  .nav-item.active { background: #1d2a3a; border-color: #25415f; color: #cfe7ff; }
+  .main { flex: 1; padding: 20px 24px 40px; max-width: 1200px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 14px; margin: 0 0 12px; color: #cbd5e1; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; background: #0d1016; border: 1px solid var(--line); border-radius: 8px;
+    color: var(--fg); padding: 8px 10px; font-size: 13px; font-family: inherit; }
+  textarea { min-height: 68px; resize: vertical; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button.primary { background: var(--accent); color: #04121f; border: 0; border-radius: 8px;
+                   padding: 9px 18px; font-weight: 700; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line);
+                 border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stat { background: var(--panel2); border-radius: 10px; padding: 10px 12px; }
+  .stat .k { color: var(--muted); font-size: 11px; }
+  .stat .v { font-size: 20px; font-weight: 700; }
+  .stat .v.ok { color: var(--ok); } .stat .v.err { color: var(--err); } .stat .v.warn { color: var(--warn); }
+  .bar { height: 8px; background: #0d1016; border-radius: 6px; overflow: hidden; margin-top: 10px; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1d9bf0, #3fb950); }
+  pre.log { background: #0b0e13; border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+            height: 260px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap;
+            font-family: ui-monospace, Consolas, monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  td.mono, th.mono { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; }
+  .pill.SUCCESS { background: #12341f; color: #56d364; }
+  .pill.FAILED { background: #3a1618; color: #ff7b72; }
+  .pill.PARTIAL { background: #3a2f10; color: #e3b341; }
+  .pill.ABORTED { background: #2a2f3a; color: #9aa3b2; }
+  .hidden { display: none; }
+  .kv { display: grid; grid-template-columns: 180px 1fr; gap: 6px 14px; font-size: 13px; }
+  .kv .k { color: var(--muted); }
+  footer { color: var(--muted); font-size: 11.5px; margin-top: 24px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="nav">
+    <div class="brand">X 媒体下载器<small>本地操作台</small></div>
+    <div class="nav-label">任务</div>
+    <button class="nav-item active" data-view="download">下载</button>
+    <button class="nav-item" data-view="targets">ID 列表</button>
+    <div class="nav-label">系统</div>
+    <button class="nav-item" data-view="accounts">账号</button>
+    <button class="nav-item" data-view="settings">设置</button>
+  </nav>
+
+  <main class="main">
+    <!-- ==================== 下载 ==================== -->
+    <section id="view-download">
+      <h1>下载任务</h1>
+      <div class="sub">任务类型：用户媒体 / Tag 搜索 / 评论区 / 纯文本 / 主页信息（所有请求走限流与每日配额）</div>
+
+      <div class="card">
+        <h2>任务</h2>
+        <div class="grid">
+          <div>
+            <label>任务类型</label>
+            <select id="taskType">
+              <option value="user">用户媒体（user）</option>
+              <option value="tag">Tag / 高级搜索（tag）</option>
+              <option value="reply">评论区（reply）</option>
+              <option value="text">纯文本（text）</option>
+              <option value="profile">主页信息（profile）</option>
+            </select>
+          </div>
+          <div>
+            <label id="targetLabel">用户名（每行一个）</label>
+            <textarea id="targets" placeholder="Susu0526m"></textarea>
+          </div>
+          <div>
+            <label>最多处理推文数（0 = 不限）</label>
+            <input type="number" id="limit" value="0" min="0">
+          </div>
+          <div>
+            <label>选项</label>
+            <div class="row" style="margin-top:6px">
+              <label style="display:flex;gap:6px;align-items:center;color:var(--fg)">
+                <input type="checkbox" id="fresh"> 忽略增量水位线
+              </label>
+              <label style="display:flex;gap:6px;align-items:center;color:var(--fg)">
+                <input type="checkbox" id="dryRun"> 只列清单（dry-run）
+              </label>
+              <label style="display:flex;gap:6px;align-items:center;color:var(--fg)">
+                <input type="checkbox" id="useList"> 按 ID 列表顺序下载（忽略上面的目标）
+              </label>
+              <button class="ghost" onclick="switchView('targets')">管理 ID 列表</button>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="primary" id="btnStart">开始执行</button>
+          <button class="ghost" id="btnStop">停止</button>
+          <span class="sub" id="runState" style="margin:0">空闲</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>进度</h2>
+        <div class="stats">
+          <div class="stat"><div class="k">成功</div><div class="v ok" id="statOk">0</div></div>
+          <div class="stat"><div class="k">失败</div><div class="v err" id="statFail">0</div></div>
+          <div class="stat"><div class="k">跳过 / 列出</div><div class="v warn" id="statSkip">0</div></div>
+          <div class="stat"><div class="k">API 调用</div><div class="v" id="statApi">0</div></div>
+        </div>
+        <div class="bar"><i id="bar"></i></div>
+        <div class="sub" id="progressText" style="margin-top:8px">等待开始</div>
+      </div>
+
+      <div class="card">
+        <h2>实时日志</h2>
+        <pre class="log" id="logBox"></pre>
+      </div>
+    </section>
+
+    <!-- ==================== ID 列表 ==================== -->
+    <section id="view-targets" class="hidden">
+      <h1>ID 列表</h1>
+      <div class="sub">在这里维护要下载的 ID：能增加、能删除、能校验；批量下载按列表顺序从上到下逐个执行（可上移/下移调整）</div>
+
+      <div class="card" id="invalidBanner" style="display:none;border-color:#5a2a2a;background:#241618">
+        <div class="row" style="justify-content:space-between">
+          <div><b style="color:var(--err)">⚠ 发现无效 ID</b>
+            <span class="sub" id="invalidText" style="margin-left:8px"></span></div>
+          <button class="ghost" id="btnRemoveInvalid">删除全部无效 ID</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>增加 ID</h2>
+        <div class="grid" style="grid-template-columns:2fr 1fr">
+          <div>
+            <label>ID（每行一个；支持 @名字 或 x.com/名字，可在 ID 后用空格写备注）</label>
+            <textarea id="newTargets" placeholder="Susu0526m 本人账号&#10;@another_id"></textarea>
+          </div>
+          <div>
+            <label>统一备注（可选）</label>
+            <input type="text" id="newNote" placeholder="例如：重点关注">
+            <div class="row" style="margin-top:10px">
+              <button class="primary" id="btnAddTargets">加入列表</button>
+              <button class="ghost" id="btnCheckPending">校验（只查新增/无效）</button>
+              <button class="ghost" id="btnCheckAll">全部重新校验</button>
+            </div>
+          </div>
+        </div>
+        <div class="sub" id="addResult" style="margin:8px 0 0"></div>
+      </div>
+
+      <div class="card">
+        <h2>列表 <span class="sub" id="targetsSummary" style="margin-left:6px"></span></h2>
+        <div class="row" style="margin-bottom:10px">
+          <button class="primary" id="btnRunList">按顺序全部下载</button>
+          <label style="display:flex;gap:6px;align-items:center;color:var(--fg)">
+            <input type="checkbox" id="listDryRun"> 只列清单（dry-run）
+          </label>
+          <input type="number" id="listLimit" value="0" min="0" style="width:150px"
+                 title="每个用户最多处理多少条推文（0=不限）">
+          <button class="ghost" onclick="loadTargets()">刷新</button>
+        </div>
+        <table id="targetsTable">
+          <thead><tr><th>序号</th><th>ID</th><th>昵称</th><th>状态</th><th>推文</th><th>媒体</th>
+            <th>上次校验</th><th>备注 / 无效原因</th><th>操作</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 账号 ==================== -->
+    <section id="view-accounts" class="hidden">
+      <h1>账号</h1>
+      <div class="sub">Cookie 只存本地配置文件，接口与页面都不回显 Cookie</div>
+      <div class="card">
+        <div class="row"><button class="ghost" onclick="loadAccounts()">刷新</button></div>
+        <table id="accountsTable">
+          <thead><tr><th>账号</th><th>备注</th><th>状态</th><th>今日已用</th><th>每日上限</th><th>剩余</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== 设置 ==================== -->
+    <section id="view-settings" class="hidden">
+      <h1>设置</h1>
+      <div class="sub">当前生效配置（只读展示；修改请编辑 config.yaml 后重启操作台）</div>
+      <div class="card"><div class="kv" id="settingsBox"></div></div>
+      <div class="card">
+        <h2>统计报告</h2>
+        <div class="sub">下载历史与执行历史仍然落库（供增量去重与统计），但不在界面展示；需要时在此导出报告</div>
+        <div class="row">
+          <button class="ghost" id="btnReport">生成统计报告（CSV + Markdown）</button>
+          <span class="sub" id="reportResult" style="margin:0"></span>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      本工具仅供编程学习、技术研究与个人归档使用；下载内容的著作权归原作者与平台所有，不得用于侵权传播或对外分发。<br>
+      请使用专用小号 Cookie（Cookie 仅保存在本地 config.yaml，不会被上传）；X GraphQL 为非官方接口，调用请遵守平台条款与当地法律法规。
+    </footer>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let logBase = 0, polling = null;
+
+function switchView(name) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  ['download', 'targets', 'accounts', 'settings'].forEach(v =>
+    $('view-' + v).classList.toggle('hidden', v !== name));
+  if (name === 'targets') loadTargets();
+  if (name === 'accounts') loadAccounts();
+  if (name === 'settings') loadSettings();
+}
+document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => switchView(b.dataset.view));
+
+const taskLabels = {
+  user: '用户名（每行一个）', tag: 'Tag / 搜索词（每行一个，可带 #）',
+  reply: '推文链接或 ID（每行一个）', text: '用户名（每行一个）', profile: '用户名（每行一个）'
+};
+$('taskType').onchange = e => {
+  $('targetLabel').textContent = taskLabels[e.target.value];
+  $('targets').placeholder = e.target.value === 'reply'
+    ? 'https://x.com/user/status/1234567890' : 'Susu0526m';
+};
+
+async function poll() {
+  try {
+    const r = await fetch('/api/status?since=' + logBase);
+    const data = await r.json();
+    const s = data.status;
+    $('statOk').textContent = s.success;
+    $('statFail').textContent = s.failed;
+    $('statSkip').textContent = s.skipped;
+    $('statApi').textContent = s.apiCalls;
+    $('runState').textContent = s.running
+      ? `执行中：${s.task} ${s.currentTarget ? '→ ' + s.currentTarget : ''}`
+      : (s.finishedAt ? '已完成' : '空闲');
+    $('btnStart').disabled = s.running;
+    $('btnStop').disabled = !s.running;
+    const listInfo = s.listTotal ? `（列表进度 ${s.listDone}/${s.listTotal}）` : '';
+    $('progressText').textContent = (s.running ? '进行中 · ' : '') + listInfo +
+      (s.lastMessage || '等待开始') + (s.lastError ? ' ｜ 错误：' + s.lastError : '');
+    const total = Math.max(1, s.success + s.failed + s.skipped);
+    $('bar').style.width = (s.running ? Math.min(95, (s.success + s.failed) / total * 100) : (s.finishedAt ? 100 : 0)) + '%';
+    if (data.logs && data.logs.length) {
+      const box = $('logBox');
+      data.logs.forEach(line => { box.textContent += line + '\n'; });
+      logBase += data.logs.length;
+      box.scrollTop = box.scrollHeight;
+    }
+    if (s.logCount < logBase) { logBase = 0; $('logBox').textContent = ''; }
+  } catch (e) { /* 服务未就绪时忽略 */ }
+}
+
+$('btnStart').onclick = async () => {
+  const useList = $('useList').checked;
+  const targets = $('targets').value.split('\n').map(t => t.trim()).filter(Boolean);
+  if (!targets.length && !useList) { alert('请填写至少一个目标，或勾选「按 ID 列表顺序下载」'); return; }
+  const body = {
+    task: $('taskType').value, targets, useTargetList: useList,
+    limit: parseInt($('limit').value || '0', 10),
+    fresh: $('fresh').checked, dryRun: $('dryRun').checked
+  };
+  const r = await fetch('/api/run', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await r.json();
+  if (data.error) { alert(data.error); }
+};
+$('btnStop').onclick = async () => { await fetch('/api/stop', { method: 'POST' }); };
+$('btnReport').onclick = async () => {
+  const r = await fetch('/api/report', { method: 'POST' });
+  const d = await r.json();
+  $('reportResult').textContent = d.error ? d.error : `已生成：${d.markdown}（记录 ${d.recordCount} 条）`;
+};
+
+// ------------------------------------------------------------ ID 列表
+let targetsCache = [];
+
+async function loadTargets() {
+  try {
+    const d = await (await fetch('/api/targets')).json();
+    targetsCache = d.rows || [];
+    renderTargets(d);
+  } catch (e) { /* 服务未就绪 */ }
+}
+
+function renderTargets(d) {
+  const tb = $('targetsTable').querySelector('tbody');
+  if (!targetsCache.length) {
+    tb.innerHTML = '<tr><td colspan="9" class="sub">列表为空：在上面填入 ID 后点「加入列表」</td></tr>';
+  } else {
+    tb.innerHTML = targetsCache.map((t, i) => {
+      const invalid = t.status === 'INVALID';
+      const statusPill = invalid ? '<span class="pill FAILED">无效</span>'
+        : (t.status === 'VALID' ? '<span class="pill SUCCESS">有效</span>'
+        : '<span class="pill ABORTED">未校验</span>');
+      const detail = invalid ? `<span style="color:var(--err)">${t.lastError || '校验失败'}</span>`
+        : (t.note || '');
+      const dim = t.enabled ? '' : ' style="opacity:.45"';
+      return `<tr${dim}>
+        <td>${i + 1}</td>
+        <td><b>@${t.screenName}</b></td>
+        <td>${t.displayName || ''}</td>
+        <td>${statusPill}</td>
+        <td>${t.tweetCount || 0}</td>
+        <td>${t.mediaCount || 0}</td>
+        <td>${fmtTime(t.lastCheckedAt)}</td>
+        <td>${detail}</td>
+        <td class="row" style="gap:4px">
+          <button class="ghost" style="padding:2px 8px" onclick="moveTarget(${t.id},-1)">↑</button>
+          <button class="ghost" style="padding:2px 8px" onclick="moveTarget(${t.id},1)">↓</button>
+          <button class="ghost" style="padding:2px 8px" onclick="toggleTarget(${t.id},${!t.enabled})">${t.enabled ? '停用' : '启用'}</button>
+          <button class="ghost" style="padding:2px 8px" onclick="removeTarget(${t.id})">删除</button>
+        </td></tr>`;
+    }).join('');
+  }
+  const invalidCount = d.invalidCount || 0;
+  $('targetsSummary').textContent =
+    `共 ${d.count || 0} 个，参与下载 ${d.runnableCount || 0} 个` + (invalidCount ? `，无效 ${invalidCount} 个` : '');
+  const banner = $('invalidBanner');
+  if (invalidCount) {
+    banner.style.display = 'block';
+    const names = targetsCache.filter(t => t.status === 'INVALID')
+      .map(t => '@' + t.screenName).join('、');
+    $('invalidText').textContent = `有 ${invalidCount} 个 ID 校验失败：${names} —— 建议删除，否则会被跳过（不影响其它 ID 下载）`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+$('btnAddTargets').onclick = async () => {
+  const text = $('newTargets').value;
+  if (!text.trim()) { alert('请填写要加入的 ID'); return; }
+  const r = await fetch('/api/targets', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ text, note: $('newNote').value })
+  });
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  const parts = [];
+  if ((d.added || []).length) parts.push(`新增 ${d.added.length} 个：` + d.added.map(t => '@' + t.screenName).join('、'));
+  if ((d.skipped || []).length) parts.push(`已存在 ${d.skipped.length} 个：` + d.skipped.join('、'));
+  if ((d.invalidInput || []).length) parts.push(`格式非法 ${d.invalidInput.length} 行已忽略：` + d.invalidInput.join('、'));
+  $('addResult').textContent = parts.join(' ｜ ') || '未变化';
+  $('newTargets').value = '';
+  await loadTargets();
+};
+$('btnCheckPending').onclick = () => checkTargets(false);
+$('btnCheckAll').onclick = () => checkTargets(true);
+$('btnRemoveInvalid').onclick = async () => {
+  if (!confirm('确定删除全部无效 ID？')) return;
+  const d = await (await fetch('/api/targets/remove-invalid', { method: 'POST' })).json();
+  $('addResult').textContent = `已删除 ${d.removed} 个无效 ID`;
+  await loadTargets();
+};
+async function checkTargets(all) {
+  const r = await fetch('/api/targets/check', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ all })
+  });
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  $('addResult').textContent = '已开始校验，进度见「下载」页的实时日志';
+  switchView('download');
+}
+async function removeTarget(id) {
+  if (!confirm('从列表删除该 ID？')) return;
+  await fetch('/api/targets/remove', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id })
+  });
+  await loadTargets();
+}
+async function moveTarget(id, delta) {
+  await fetch('/api/targets/move', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, delta })
+  });
+  await loadTargets();
+}
+async function toggleTarget(id, enabled) {
+  await fetch('/api/targets/toggle', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, enabled })
+  });
+  await loadTargets();
+}
+$('btnRunList').onclick = async () => {
+  const body = { task: 'user', useTargetList: true, targets: [],
+    limit: parseInt($('listLimit').value || '0', 10), dryRun: $('listDryRun').checked };
+  const r = await fetch('/api/run', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  switchView('download');
+};
+
+async function loadAccounts() {
+  const d = await (await fetch('/api/accounts')).json();
+  const tb = $('accountsTable').querySelector('tbody');
+  tb.innerHTML = d.rows.map(r => {
+  const unlimited = !(r.quotaLimit > 0);
+  return `<tr><td>${r.name}</td><td>${r.note || ''}</td>
+  <td>${r.status}</td><td>${r.quotaUsed}</td><td>${unlimited ? '不限' : r.quotaLimit}</td>
+  <td>${unlimited ? '不限' : r.remaining}</td></tr>`;
+  }).join('');
+}
+async function loadSettings() {
+  const s = await (await fetch('/api/settings')).json();
+  const rows = [
+    ['保存目录', s.savePath], ['数据库', s.dbPath], ['日志', `${s.logLevel} → ${s.logFile}`],
+    ['并发 / 间隔', `${s.maxConcurrent} / ${s.requestIntervalMs}ms（重试 ${s.maxRetries}）`],
+    ['命名模板', s.namingTemplate], ['图片格式 / 视频码率', `${s.imageFormat} / ${s.videoVariant}`],
+    ['增量 / 续传', `${s.incremental} / ${s.resume}`],
+    ['含视频 / 含转推', `${s.hasVideo} / ${s.hasRetweet}`], ['时间范围', s.timeRange],
+    ['每日调用上限', s.quotaPerAccountDaily > 0 ? s.quotaPerAccountDaily + ' 次（quota.per-account-daily）' : '不限制（quota.per-account-daily = 0）'],
+    ['代理', s.proxy.enabled ? `${s.proxy.mode} ${s.proxy.endpoint}` : '未启用'],
+    ['Tag 过滤 / product', `${s.tag.filter || '（空）'} / ${s.tag.product}`],
+    ['Tag 保存文本', s.tag.saveText], ['评论区含视频', s.reply.includeVideo]
+  ];
+  $('settingsBox').innerHTML = rows.map(([k, v]) => `<div class="k">${k}</div><div>${v}</div>`).join('');
+}
+function fmtTime(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : ''; }
+
+polling = setInterval(poll, 1000);
+poll();
+</script>
+</body>
+</html>

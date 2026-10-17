@@ -1,0 +1,6 @@
+{
+  "存在": ["V1.1", "12. 文档效力与修订记录", "accountBinding", "mediaKey", "QuotaLedger",
+           "String operationName,", "markQuotaExhausted", "ClearMode mode", "PathSanitizer",
+           "AppBootstrap", "TaskResult：taskName", "getCursor"],
+  "不存在": ["V1.0", "void clearByUser(String screenName)"]
+}

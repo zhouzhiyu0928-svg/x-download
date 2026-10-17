@@ -1,0 +1,171 @@
+P000 [(none)] 
+P001 [(none)] Twitter/X 媒体下载器
+P002 [(none)] Java 重写版  数据库结构说明
+P003 [(none)] 基于详细设计文档整理
+P004 [(none)] 版本：V1.0    日期：2026-10-12
+P005 [Heading 1] 1. 概述
+P006 [(none)] 本系统使用 SQLite 作为本地数据库，用于记录下载状态、支持增量同步、断点续传与统计查询。数据库文件默认存放在程序工作目录或配置指定路径（如 data/xmedia.db），程序启动时自动检测并建表。
+P007 [(none)] 设计原则：结构简洁、以下载记录为核心、便于扩展用户主页与任务历史；不存储 Cookie 等敏感认证信息。
+P008 [Heading 1] 2. 表关系概览（ER 说明）
+P009 [(none)] 核心实体与关系如下：
+P010 [(none)] • download_record（下载记录）— 核心表，每条媒体对应一条记录。
+P011 [(none)] • user_profile（用户主页信息）— 可选，与 download_record 通过 user_screen_name 逻辑关联。
+P012 [(none)] • task_run（任务执行历史）— 可选，记录每次任务运行汇总，与 download_record 通过 task_run_id 可选关联。
+P013 [(none)] • schema_version（结构版本）— 用于数据库迁移管理。
+P014 [(none)] 关系类型：均为逻辑关联（SQLite 可不强制外键），应用层保证一致性。download_record 与 user_profile 为多对一（多条记录对应同一用户）；download_record 与 task_run 为多对一（可选）。
+P015 [Heading 1] 3. 表结构详细说明
+P016 [Heading 2] 3.1 download_record（下载记录表）— 核心表
+P017 [(none)] 用途：记录每一条已处理媒体的下载结果，作为增量判断与断点续传的依据。
+TABLE0 rows=15 cols=4
+   R00 | 字段名 | 类型 | 约束 | 说明
+   R01 | id | INTEGER | PK, AI | 自增主键
+   R02 | tweet_id | TEXT | NOT NULL | 推文 ID
+   R03 | media_url | TEXT | NOT NULL | 媒体原始 URL
+   R04 | media_type | TEXT | NOT NULL | 类型：image / video / gif
+   R05 | local_path | TEXT |  | 本地保存路径（相对或绝对）
+   R06 | user_screen_name | TEXT |  | 所属用户 screen_name
+   R07 | task_type | TEXT |  | 来源任务：USER_MEDIA / TAG / REPLY / TEXT / PROFILE
+   R08 | status | TEXT | NOT NULL | SUCCESS / FAILED / SKIPPED
+   R09 | error_message | TEXT |  | 失败时的错误信息（可截断）
+   R10 | file_size | INTEGER |  | 文件大小（字节），可选
+   R11 | tweet_created_at | TEXT |  | 推文发布时间（ISO 或统一格式）
+   R12 | downloaded_at | TEXT |  | 下载完成时间
+   R13 | task_run_id | INTEGER |  | 关联 task_run.id（可选）
+   R14 | created_at | TEXT | NOT NULL | 记录插入时间
+P018 [(none)] 索引建议：
+P019 [(none)] • UNIQUE(tweet_id, media_url) — 防止同一媒体重复入库，支撑增量判断
+P020 [(none)] • INDEX(user_screen_name)
+P021 [(none)] • INDEX(status)
+P022 [(none)] • INDEX(task_type)
+P023 [Heading 2] 3.2 user_profile（用户主页信息表）— 可选
+P024 [(none)] 用途：保存 ProfileTask 获取的用户主页信息，避免重复请求。
+TABLE1 rows=12 cols=4
+   R00 | 字段名 | 类型 | 约束 | 说明
+   R01 | id | INTEGER | PK, AI | 自增主键
+   R02 | screen_name | TEXT | UNIQUE, NOT NULL | 用户 screen_name
+   R03 | rest_id | TEXT |  | 用户 rest_id
+   R04 | name | TEXT |  | 显示名称
+   R05 | description | TEXT |  | 简介
+   R06 | avatar_url | TEXT |  | 头像 URL
+   R07 | banner_url | TEXT |  | Banner URL
+   R08 | avatar_local_path | TEXT |  | 头像本地路径
+   R09 | banner_local_path | TEXT |  | Banner 本地路径
+   R10 | followers_count | INTEGER |  | 粉丝数（可选）
+   R11 | updated_at | TEXT | NOT NULL | 最后更新时间
+P025 [(none)] 索引：UNIQUE(screen_name)。与 download_record 通过 user_screen_name = screen_name 逻辑关联。
+P026 [Heading 2] 3.3 task_run（任务执行历史表）— 可选
+P027 [(none)] 用途：记录每次任务运行的汇总信息，便于统计与排查。
+TABLE2 rows=14 cols=4
+   R00 | 字段名 | 类型 | 约束 | 说明
+   R01 | id | INTEGER | PK, AI | 自增主键
+   R02 | task_type | TEXT | NOT NULL | 任务类型
+   R03 | target | TEXT |  | 目标描述（用户名 / Tag / 链接等）
+   R04 | status | TEXT | NOT NULL | RUNNING / SUCCESS / PARTIAL / FAILED
+   R05 | total_count | INTEGER |  | 计划处理总数
+   R06 | success_count | INTEGER |  | 成功数
+   R07 | failed_count | INTEGER |  | 失败数
+   R08 | skipped_count | INTEGER |  | 跳过数（已存在）
+   R09 | api_call_count | INTEGER |  | API 调用次数
+   R10 | started_at | TEXT | NOT NULL | 开始时间
+   R11 | finished_at | TEXT |  | 结束时间
+   R12 | duration_ms | INTEGER |  | 耗时（毫秒）
+   R13 | message | TEXT |  | 备注或错误摘要
+P028 [(none)] 索引：INDEX(task_type)、INDEX(started_at)。download_record.task_run_id 可指向本表 id。
+P029 [Heading 2] 3.4 schema_version（结构版本表）
+P030 [(none)] 用途：记录当前数据库结构版本，便于后续迁移升级。
+TABLE3 rows=4 cols=4
+   R00 | 字段名 | 类型 | 约束 | 说明
+   R01 | version | INTEGER | PK | 版本号，从 1 递增
+   R02 | applied_at | TEXT | NOT NULL | 应用时间
+   R03 | description | TEXT |  | 变更说明
+P031 [(none)] 初始版本建议写入 version=1。后续加表或改字段时递增版本并执行迁移脚本。
+P032 [Heading 1] 4. 建表 SQL 参考
+P033 [(none)] 以下为 SQLite 建表语句参考（实现时可放在 Database 初始化逻辑中）：
+P034 [(none)] -- download_record
+P035 [(none)] CREATE TABLE IF NOT EXISTS download_record (
+P036 [(none)]   id INTEGER PRIMARY KEY AUTOINCREMENT,
+P037 [(none)]   tweet_id TEXT NOT NULL,
+P038 [(none)]   media_url TEXT NOT NULL,
+P039 [(none)]   media_type TEXT NOT NULL,
+P040 [(none)]   local_path TEXT,
+P041 [(none)]   user_screen_name TEXT,
+P042 [(none)]   task_type TEXT,
+P043 [(none)]   status TEXT NOT NULL,
+P044 [(none)]   error_message TEXT,
+P045 [(none)]   file_size INTEGER,
+P046 [(none)]   tweet_created_at TEXT,
+P047 [(none)]   downloaded_at TEXT,
+P048 [(none)]   task_run_id INTEGER,
+P049 [(none)]   created_at TEXT NOT NULL,
+P050 [(none)]   UNIQUE(tweet_id, media_url)
+P051 [(none)] );
+P052 [(none)] CREATE INDEX IF NOT EXISTS idx_dr_user ON download_record(user_screen_name);
+P053 [(none)] CREATE INDEX IF NOT EXISTS idx_dr_status ON download_record(status);
+P054 [(none)] CREATE INDEX IF NOT EXISTS idx_dr_task_type ON download_record(task_type);
+P055 [(none)] -- user_profile
+P056 [(none)] CREATE TABLE IF NOT EXISTS user_profile (
+P057 [(none)]   id INTEGER PRIMARY KEY AUTOINCREMENT,
+P058 [(none)]   screen_name TEXT NOT NULL UNIQUE,
+P059 [(none)]   rest_id TEXT, name TEXT, description TEXT,
+P060 [(none)]   avatar_url TEXT, banner_url TEXT,
+P061 [(none)]   avatar_local_path TEXT, banner_local_path TEXT,
+P062 [(none)]   followers_count INTEGER, updated_at TEXT NOT NULL
+P063 [(none)] );
+P064 [(none)] -- task_run
+P065 [(none)] CREATE TABLE IF NOT EXISTS task_run (
+P066 [(none)]   id INTEGER PRIMARY KEY AUTOINCREMENT,
+P067 [(none)]   task_type TEXT NOT NULL, target TEXT, status TEXT NOT NULL,
+P068 [(none)]   total_count INTEGER, success_count INTEGER, failed_count INTEGER, skipped_count INTEGER,
+P069 [(none)]   api_call_count INTEGER, started_at TEXT NOT NULL, finished_at TEXT,
+P070 [(none)]   duration_ms INTEGER, message TEXT
+P071 [(none)] );
+P072 [(none)] -- schema_version
+P073 [(none)] CREATE TABLE IF NOT EXISTS schema_version (
+P074 [(none)]   version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL, description TEXT
+P075 [(none)] );
+P076 [Heading 1] 5. 数据库结构图（文字版）
+P077 [(none)] 可用下列关系绘制 ER 图：
+P078 [(none)] ┌─────────────────────┐         ┌─────────────────────┐
+P079 [(none)] │    user_profile     │         │      task_run       │
+P080 [(none)] │  PK id              │         │  PK id              │
+P081 [(none)] │  UK screen_name     │         │     task_type       │
+P082 [(none)] │     rest_id         │         │     target          │
+P083 [(none)] │     name            │         │     status          │
+P084 [(none)] │     description     │         │     success_count   │
+P085 [(none)] │     avatar_url      │         │     failed_count    │
+P086 [(none)] │     banner_url      │         │     started_at      │
+P087 [(none)] │     updated_at      │         │     finished_at     │
+P088 [(none)] └──────────┬──────────┘         └──────────┬──────────┘
+P089 [(none)]            │ 1                                 │ 1
+P090 [(none)]            │                                   │
+P091 [(none)]            │ N                                 │ N
+P092 [(none)] ┌──────────┴───────────────────────────────────┴──────────┐
+P093 [(none)] │                   download_record                        │
+P094 [(none)] │  PK id                                                   │
+P095 [(none)] │  UK (tweet_id, media_url)                                │
+P096 [(none)] │     media_type, local_path, user_screen_name             │
+P097 [(none)] │     task_type, status, error_message, file_size          │
+P098 [(none)] │     tweet_created_at, downloaded_at, task_run_id         │
+P099 [(none)] │     created_at                                           │
+P100 [(none)] └──────────────────────────────────────────────────────────┘
+P101 [(none)] 
+P102 [(none)] ┌─────────────────────┐
+P103 [(none)] │   schema_version    │
+P104 [(none)] │  PK version         │
+P105 [(none)] │     applied_at      │
+P106 [(none)] │     description     │
+P107 [(none)] └─────────────────────┘
+P108 [Heading 1] 6. 典型查询场景
+P109 [(none)] • 增量判断：SELECT 1 FROM download_record WHERE tweet_id=? AND media_url=? LIMIT 1
+P110 [(none)] • 某用户已下载列表：SELECT * FROM download_record WHERE user_screen_name=? AND status='SUCCESS'
+P111 [(none)] • 失败重试列表：SELECT * FROM download_record WHERE status='FAILED'
+P112 [(none)] • 清理某用户缓存：DELETE FROM download_record WHERE user_screen_name=?
+P113 [(none)] • 任务历史：SELECT * FROM task_run ORDER BY started_at DESC LIMIT 20
+P114 [Heading 1] 7. 补充说明
+P115 [(none)] • 第一阶段可仅实现 download_record + schema_version，user_profile 与 task_run 在第二/三阶段按需启用。
+P116 [(none)] • 不在数据库中存储 Cookie、auth_token 等敏感信息。
+P117 [(none)] • 时间字段统一使用 ISO-8601 字符串或约定格式，便于跨平台比较。
+P118 [(none)] • 外键可为逻辑关联，若开启 SQLite 外键，需在连接时执行 PRAGMA foreign_keys = ON。
+P119 [(none)] • 后续若增加“文本推文归档”等需求，可新增 text_record 表，结构与 download_record 类似。
+P120 [(none)] 
+P121 [(none)] — 文档结束 —

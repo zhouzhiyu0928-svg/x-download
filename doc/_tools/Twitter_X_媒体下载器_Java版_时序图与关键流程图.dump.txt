@@ -1,0 +1,188 @@
+P000 [(none)] 
+P001 [(none)] Twitter/X 媒体下载器
+P002 [(none)] Java 重写版  时序图 / 关键流程图
+P003 [(none)] 基于详细设计整理
+P004 [(none)] 版本：V1.0    日期：2026-10-12
+P005 [Heading 1] 1. 文档说明
+P006 [(none)] 本文档用文字时序与流程图描述系统关键协作过程，补充详细设计中的流程说明，便于开发与评审时统一理解调用顺序与异常分支。图中参与者与详细设计、类图说明中的模块一致。
+P007 [(none)] 涵盖：启动与依赖组装、用户媒体下载主流程、单次 GraphQL 请求、媒体下载与落盘、Rate Limit 与账号切换、Tag/评论区差异说明。
+P008 [Heading 1] 2. 参与者一览
+TABLE0 rows=14 cols=2
+   R00 | 参与者 | 说明
+   R01 | User / CLI | 命令行用户或操作台触发方
+   R02 | Command | picocli 子命令（如 UserCommand）
+   R03 | ConfigLoader | 加载并校验配置
+   R04 | TaskScheduler | 创建 TaskContext、调度 Task、汇总结果
+   R05 | Task | 具体任务（UserMediaTask 等）
+   R06 | GraphQLClient | 发 GraphQL 请求、组 Header、处理重试
+   R07 | AccountPool | 分配/回收账号、标记限流或失效
+   R08 | RateLimiter | 并发与间隔控制、退避
+   R09 | TxIdGen | TransactionIdGenerator，生成 x-client-transaction-id
+   R10 | X API | X 平台 GraphQL 接口（外部）
+   R11 | MediaDownloader | 并发下载媒体文件
+   R12 | NamingTemplate | 渲染本地路径
+   R13 | Repository | DownloadRecordRepository / SQLite
+P009 [Heading 1] 3. 启动与依赖组装
+P010 [(none)] 用户执行 CLI 后，完成配置加载与核心组件组装，再进入任务调度。
+P011 [(none)] 时序（文字）：
+P012 [(none)] 1. User → Command：执行子命令（如 user --users a,b --config config.yaml）
+P013 [(none)] 2. Command → ConfigLoader：load(path)
+P014 [(none)] 3. ConfigLoader → Command：返回 AppConfig（校验失败则抛 ConfigException 并退出）
+P015 [(none)] 4. Command：根据 AppConfig 创建 AccountPool、RateLimiter、TxIdGen、GraphQLClient、
+P016 [(none)]          MediaDownloader、Repository、Database（建表若需要）
+P017 [(none)] 5. Command：创建具体 Task（如 UserMediaTask）并注入参数
+P018 [(none)] 6. Command → TaskScheduler：run(task) 或 runAll(tasks)
+P019 [(none)] 7. TaskScheduler：组装 TaskContext，调用 task.execute(context)
+P020 [(none)] 8. 任务结束后 TaskScheduler 汇总 TaskResult，Command 打印统计并退出
+P021 [(none)] 流程图（文字）：
+P022 [(none)]   [开始] → 解析 CLI 参数 → 加载配置
+P023 [(none)]        → 配置是否合法？ ─否→ 打印错误并退出
+P024 [(none)]        ─是→ 初始化 AccountPool / Client / Downloader / DB
+P025 [(none)]        → 创建 Task → TaskScheduler 执行
+P026 [(none)]        → 输出统计 → [结束]
+P027 [Heading 1] 4. 用户媒体下载主流程（时序）
+P028 [(none)] UserMediaTask 在 TaskContext 内完成：拉用户信息 → 分页拉媒体时间线 → 过滤 → 增量判断 → 下载 → 写库。
+P029 [Heading 2] 4.1 整体时序
+P030 [(none)] 1. TaskScheduler → UserMediaTask：execute(context)
+P031 [(none)] 2. UserMediaTask → GraphQLClient：UserByScreenName（取 rest_id 等）
+P032 [(none)] 3. GraphQLClient 完成一次完整请求（见第 5 节）后返回用户信息
+P033 [(none)] 4. 循环（分页）：
+P034 [(none)]    a. UserMediaTask → GraphQLClient：UserMedia / UserTweets（cursor）
+P035 [(none)]    b. 解析推文与 MediaItem 列表
+P036 [(none)]    c. 按 has_retweet / 时间范围 / 亮点等过滤
+P037 [(none)]    d. 对每条媒体：Repository.exists(tweetId, mediaUrl)
+P038 [(none)]       - 已存在且开启增量 → 计入 skip，不下载
+P039 [(none)]       - 否则加入待下载列表
+P040 [(none)]    e. 若有 cursor 且未达停止条件 → 继续分页；否则跳出循环
+P041 [(none)] 5. UserMediaTask → MediaDownloader：download(pendingItems, progressCallback)
+P042 [(none)] 6. MediaDownloader 并发下载（见第 6 节），回写 Repository
+P043 [(none)] 7. UserMediaTask 汇总本用户结果；若有多用户则对下一用户重复 2～6
+P044 [(none)] 8. 返回 TaskResult 给 TaskScheduler
+P045 [Heading 2] 4.2 主流程控制流（流程图）
+P046 [(none)]   [execute] → 获取用户信息
+P047 [(none)]        → 失败？ ─是→ 记录错误，处理下一用户或结束
+P048 [(none)]        ─否→ cursor = null
+P049 [(none)]        → [分页循环] 请求媒体时间线(cursor)
+P050 [(none)]        → 解析并过滤 → 增量去重 → 累积待下载列表
+P051 [(none)]        → 有下一页且未超限？ ─是→ 更新 cursor，继续循环
+P052 [(none)]        ─否→ 提交 MediaDownloader
+P053 [(none)]        → 等待下载完成 → 更新进度与统计
+P054 [(none)]        → 还有下一用户？ ─是→ 回到获取用户信息；─否→ 返回 TaskResult
+P055 [Heading 1] 5. 单次 GraphQL 请求时序
+P056 [(none)] 所有对 X 的 GraphQL 调用都经 GraphQLClient.execute，统一走账号、限流与 Transaction-ID。
+P057 [(none)] 1. Task → GraphQLClient：execute(operation, queryId, variables, type)
+P058 [(none)] 2. GraphQLClient → RateLimiter：acquire()（可能阻塞至有空位/过间隔）
+P059 [(none)] 3. GraphQLClient → AccountPool：acquire() → 得到 Account（cookie/ct0）
+P060 [(none)] 4. GraphQLClient → TxIdGen：generate(path, method) → transaction-id
+P061 [(none)] 5. GraphQLClient → X API：HTTP POST（Cookie、x-csrf-token、x-client-transaction-id 等）
+P062 [(none)] 6. 分支：
+P063 [(none)]    · 200 且业务成功 → 解析 JSON → RateLimiter.release() → AccountPool.release() → 返回结果
+P064 [(none)]    · 429 / Rate Limit → 见第 7 节（标记限流、退避、换号重试）
+P065 [(none)]    · 401/403 认证失败 → AccountPool.markInvalid → 换号重试或抛 AuthException
+P066 [(none)]    · 网络错误 / 5xx → 有限次重试（指数退避），仍失败则抛 NetworkException
+P067 [(none)]    · Transaction-ID 被拒 → 重新 generate 后重试（有限次）
+P068 [(none)] ASCII 时序示意：
+P069 [(none)] Task          Client       RateLimiter   AccountPool   TxIdGen    X API
+P070 [(none)]  |              |               |              |           |         |
+P071 [(none)]  |--execute---->|               |              |           |         |
+P072 [(none)]  |              |--acquire----->|              |           |         |
+P073 [(none)]  |              |<--------------|              |           |         |
+P074 [(none)]  |              |--acquire-------------------->|           |         |
+P075 [(none)]  |              |<----------Account------------|           |         |
+P076 [(none)]  |              |--generate------------------------------->|         |
+P077 [(none)]  |              |<-------------tx-id-----------------------|         |
+P078 [(none)]  |              |--HTTP POST---------------------------------------->|
+P079 [(none)]  |              |<-------------JSON/错误-----------------------------|
+P080 [(none)]  |              |--release----->|              |           |         |
+P081 [(none)]  |              |--release-------------------->|           |         |
+P082 [(none)]  |<---结果------|               |              |           |         |
+P083 [Heading 1] 6. 媒体下载与落盘时序
+P084 [(none)] MediaDownloader 对 pending 列表并发下载；单条失败不阻断整批。
+P085 [(none)] 1. Task → MediaDownloader：download(items, callback)
+P086 [(none)] 2. 对每个 MediaItem（线程池内）：
+P087 [(none)]    a. NamingTemplate.render(item) → localPath
+P088 [(none)]    b. 创建目录（若不存在）
+P089 [(none)]    c. HTTP GET 媒体 URL（可走代理；下载本身通常不消耗 GraphQL 额度）
+P090 [(none)]    d. 成功：写文件 → Repository.save(SUCCESS) → callback 进度
+P091 [(none)]    e. 失败：按配置重试；仍失败 → Repository.save(FAILED, error) → callback
+P092 [(none)] 3. 全部结束后返回 DownloadSummary（成功/失败/跳过计数）
+P093 [(none)] 说明：增量“跳过”发生在提交下载之前（Task 内 exists 判断），Downloader 侧主要处理 SUCCESS/FAILED。
+P094 [Heading 1] 7. Rate Limit 与账号切换流程
+P095 [(none)] 当 X 返回限流或认证失败时，Client 与 AccountPool、RateLimiter 协同换号或退避，避免直接崩溃。
+P096 [Heading 2] 7.1 Rate Limit 时序
+P097 [(none)] 1. X API → GraphQLClient：429 或业务限流响应
+P098 [(none)] 2. GraphQLClient → AccountPool：markRateLimited(account, cooldown)
+P099 [(none)] 3. GraphQLClient → RateLimiter：onRateLimited(backoff)
+P100 [(none)] 4. GraphQLClient → AccountPool：acquire() 尝试其他可用账号
+P101 [(none)] 5a. 有可用账号 → 重新 generate Transaction-ID → 再次请求 X API
+P102 [(none)] 5b. 无可用账号 → 等待冷却或抛出 RateLimitException（由 Task/Scheduler 决定中止或稍后重试）
+P103 [(none)] 6. 重试次数耗尽仍失败 → 向上抛出，Task 记录失败并视策略继续其他用户或结束
+P104 [Heading 2] 7.2 限流处理流程图
+P105 [(none)]   [收到 429/限流] → 标记当前账号冷却
+P106 [(none)]        → 触发全局限流退避（可选）
+P107 [(none)]        → 是否还有可用账号？
+P108 [(none)]           ─是→ 切换账号 → 重新生成 TxId → 重试请求
+P109 [(none)]           ─否→ 等待冷却结束？
+P110 [(none)]                ─可等待→ sleep 后重试
+P111 [(none)]                ─不可/超时→ 抛 RateLimitException
+P112 [Heading 2] 7.3 认证失败
+P113 [(none)] 1. 401/403 或明确 Cookie 无效 → markInvalid(account)
+P114 [(none)] 2. 尝试其他账号；若全部无效 → AuthException，提示用户更新 Cookie
+P115 [(none)] 3. 不把完整 Cookie 写入日志，仅记录账号 name 与错误类型
+P116 [Heading 1] 8. 其他任务类型与主流程的差异
+TABLE1 rows=5 cols=2
+   R00 | 任务 | 与用户媒体主流程的主要差异
+   R01 | TagSearchTask | 使用 SearchTimeline 等搜索类 operation；variables 含 tag/filter；结果可能跨用户；命名可含 tag；可选落盘文本
+   R02 | ReplyTask | 先解析推文 ID 或用户回复关系，再拉评论区媒体；分页对象为回复列表而非用户媒体时间线
+   R03 | TextTask | 不调用 MediaDownloader；将文本写入文件/报告；仍走 GraphQLClient 拉时间线
+   R04 | ProfileTask | UserByScreenName + 头像/Banner URL 下载；可写入 user_profile 表；无推文分页循环
+P117 [(none)] 共同点：均通过 TaskContext 使用同一套 Client、AccountPool、RateLimiter；限流与认证分支一致。
+P118 [Heading 1] 9. 进度回调与任务结束
+P119 [(none)] 1. MediaDownloader / Task 在关键节点调用 ProgressCallback（已完成数、总数、当前用户等）
+P120 [(none)] 2. CLI 或操作台据此刷新进度条与日志
+P121 [(none)] 3. Task 返回 TaskResult（success/fail/skip、耗时、失败列表摘要）
+P122 [(none)] 4. TaskScheduler 可选写入 task_run 表，再交给 Command 打印最终汇总
+P123 [(none)] 5. 用户中断（Ctrl+C / 操作台停止）：协作取消标志，Downloader 停止提交新任务，已在途请求尽量收尾后退出
+P124 [Heading 1] 10. PlantUML 参考（用户媒体主流程）
+P125 [(none)] 可将下列片段复制到支持 PlantUML 的工具中生成正式时序图：
+P126 [(none)] @startuml
+P127 [(none)] actor User
+P128 [(none)] participant Command
+P129 [(none)] participant Scheduler as TaskScheduler
+P130 [(none)] participant Task as UserMediaTask
+P131 [(none)] participant Client as GraphQLClient
+P132 [(none)] participant Pool as AccountPool
+P133 [(none)] participant RL as RateLimiter
+P134 [(none)] participant X as "X API"
+P135 [(none)] participant DL as MediaDownloader
+P136 [(none)] participant Repo as Repository
+P137 [(none)] 
+P138 [(none)] User -> Command: user --users ...
+P139 [(none)] Command -> TaskScheduler: run(task)
+P140 [(none)] TaskScheduler -> Task: execute(ctx)
+P141 [(none)] Task -> Client: UserByScreenName
+P142 [(none)] Client -> RL: acquire()
+P143 [(none)] Client -> Pool: acquire()
+P144 [(none)] Client -> X: GraphQL
+P145 [(none)] X --> Client: user json
+P146 [(none)] Client --> Task: User
+P147 [(none)] loop pages
+P148 [(none)]   Task -> Client: UserMedia(cursor)
+P149 [(none)]   Client -> X: GraphQL
+P150 [(none)]   X --> Client: timeline
+P151 [(none)]   Task -> Repo: exists(...)
+P152 [(none)] end
+P153 [(none)] Task -> DL: download(items)
+P154 [(none)] DL -> Repo: save(SUCCESS/FAILED)
+P155 [(none)] DL --> Task: Summary
+P156 [(none)] Task --> TaskScheduler: TaskResult
+P157 [(none)] TaskScheduler --> Command: stats
+P158 [(none)] Command --> User: print summary
+P159 [(none)] @enduml
+P160 [Heading 1] 11. 补充说明
+P161 [(none)] • 下载媒体文件的 HTTP GET 与 GraphQL 调用分离：限流主要针对 GraphQL；下载失败走 Downloader 自身重试。
+P162 [(none)] • 多用户任务建议串行用户、用户内并发下载，降低账号级限流叠加风险（可配置）。
+P163 [(none)] • 操作台若接后端，可将 Command 替换为 API 层，其后时序与 CLI 相同。
+P164 [(none)] • 实现时若调整类名，保持“Client 统一出口 + Pool/Limiter 协同 + Task 编排下载”的边界即可。
+P165 [(none)] 
+P166 [(none)] — 文档结束 —

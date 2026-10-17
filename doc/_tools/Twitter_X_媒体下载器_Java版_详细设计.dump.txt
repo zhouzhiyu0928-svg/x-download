@@ -1,0 +1,244 @@
+P000 [(none)] 
+P001 [(none)] Twitter/X 媒体下载器
+P002 [(none)] Java 重写版  详细设计文档
+P003 [(none)] 基于 twitter_download 项目功能进行开发
+P004 [(none)] 版本：V1.0    日期：2026-10-12
+P005 [Heading 1] 1. 设计概述
+P006 [Heading 2] 1.1 设计目标
+P007 [(none)] 本详细设计文档依据《Twitter/X 媒体下载器（Java版）需求分析》编制，明确系统的整体架构、模块划分、核心类设计、数据模型、接口约定与关键流程，指导后续编码实现。设计目标是构建一套模块化、可扩展、易维护的本地媒体下载工具，完整覆盖用户媒体、Tag 搜索、评论区、纯文本、用户主页等下载能力。
+P008 [Heading 2] 1.2 设计原则
+P009 [(none)] • 模块化：按职责拆分 Client、Task、Downloader、Storage 等核心模块，降低耦合。
+P010 [(none)] • 可配置：GraphQL 查询定义、限流参数、命名模板等均可外部配置。
+P011 [(none)] • 可扩展：任务类型通过统一接口抽象，新增模式只需实现对应 Task。
+P012 [(none)] • 稳定性：完善的重试、限流、多账号切换与异常处理机制。
+P013 [(none)] • 本地优先：所有数据与 Cookie 仅存储在本地，不依赖外部服务。
+P014 [Heading 2] 1.3 技术选型
+TABLE0 rows=10 cols=3
+   R00 | 模块 | 选型 | 说明
+   R01 | 语言与运行时 | Java 17+ | 长期支持版本，兼顾性能与生态
+   R02 | 构建工具 | Maven 或 Gradle | 依赖管理与打包
+   R03 | HTTP 客户端 | OkHttp 4.x | 连接池、拦截器、代理、Cookie 管理
+   R04 | JSON 处理 | Jackson | 灵活解析 GraphQL 复杂响应
+   R05 | 配置 | SnakeYAML / Typesafe Config | YAML 配置，支持注释与环境变量
+   R06 | 命令行 | picocli | 子命令、参数校验、帮助信息
+   R07 | 数据库 | SQLite + JDBC | 本地轻量存储，记录下载状态
+   R08 | 日志 | SLF4J + Logback | 分级日志与请求追踪
+   R09 | 并发 | CompletableFuture + ExecutorService | 可控并发下载
+P015 [Heading 1] 2. 系统架构
+P016 [Heading 2] 2.1 整体架构
+P017 [(none)] 系统采用分层 + 模块化架构，自上而下分为：交互层、任务层、服务层、基础设施层。各层通过清晰接口通信，便于独立演进与测试。
+P018 [(none)] 【交互层】
+P019 [(none)]   CLI（picocli）负责参数解析、子命令分发、进度与结果输出。
+P020 [(none)] 【任务层】
+P021 [(none)]   统一 Task 抽象，具体实现包括 UserMediaTask、TagSearchTask、ReplyTask、TextTask、ProfileTask。
+P022 [(none)]   TaskScheduler 负责任务调度、并发控制与生命周期管理。
+P023 [(none)] 【服务层】
+P024 [(none)]   GraphQLClient：封装请求、认证头、Transaction-ID、限流与重试。
+P025 [(none)]   MediaDownloader：负责媒体文件下载、命名、落盘与重试。
+P026 [(none)]   AccountPool：多账号 Cookie 管理与轮换。
+P027 [(none)]   RateLimiter：请求频率与并发控制。
+P028 [(none)] 【基础设施层】
+P029 [(none)]   ConfigManager：加载与校验配置。
+P030 [(none)]   Storage（SQLite）：下载记录与状态持久化。
+P031 [(none)]   日志与工具类。
+P032 [Heading 2] 2.2 模块职责一览
+TABLE1 rows=11 cols=2
+   R00 | 模块 | 主要职责
+   R01 | cli | 命令行入口、子命令定义、参数绑定、帮助与进度输出
+   R02 | config | 配置加载、校验、默认值合并、环境变量覆盖
+   R03 | client | GraphQL 请求封装、Header 构造、Transaction-ID 生成、代理与 Cookie 注入
+   R04 | account | 多账号 Cookie 池、轮换策略、账号健康状态管理
+   R05 | ratelimit | 请求间隔、并发信号量、指数退避、Rate Limit 响应处理
+   R06 | task | 任务抽象与具体实现（用户媒体、Tag、评论区、纯文本、主页）
+   R07 | downloader | 媒体下载、文件命名、目录创建、失败重试、进度回调
+   R08 | storage | SQLite 访问、下载记录 CRUD、增量判断、缓存清理
+   R09 | model | 领域模型（User、Tweet、Media、DownloadRecord 等）
+   R10 | util | 通用工具（时间、路径、哈希、模板渲染等）
+P033 [Heading 1] 3. 包结构与目录设计
+P034 [(none)] 推荐包结构如下（根包名可自定义，示例使用 com.xmedia.downloader）：
+P035 [(none)] com.xmedia.downloader
+P036 [(none)] ├── Application.java                 // 主入口
+P037 [(none)] ├── cli/
+P038 [(none)] │   ├── MainCommand.java
+P039 [(none)] │   ├── UserCommand.java
+P040 [(none)] │   ├── TagCommand.java
+P041 [(none)] │   ├── ReplyCommand.java
+P042 [(none)] │   ├── TextCommand.java
+P043 [(none)] │   └── ProfileCommand.java
+P044 [(none)] ├── config/
+P045 [(none)] │   ├── AppConfig.java
+P046 [(none)] │   └── ConfigLoader.java
+P047 [(none)] ├── client/
+P048 [(none)] │   ├── GraphQLClient.java
+P049 [(none)] │   ├── TransactionIdGenerator.java
+P050 [(none)] │   └── RequestInterceptor.java
+P051 [(none)] ├── account/
+P052 [(none)] │   ├── Account.java
+P053 [(none)] │   └── AccountPool.java
+P054 [(none)] ├── ratelimit/
+P055 [(none)] │   └── RateLimiter.java
+P056 [(none)] ├── task/
+P057 [(none)] │   ├── Task.java                    // 接口
+P058 [(none)] │   ├── AbstractTask.java
+P059 [(none)] │   ├── UserMediaTask.java
+P060 [(none)] │   ├── TagSearchTask.java
+P061 [(none)] │   ├── ReplyTask.java
+P062 [(none)] │   ├── TextTask.java
+P063 [(none)] │   ├── ProfileTask.java
+P064 [(none)] │   └── TaskScheduler.java
+P065 [(none)] ├── downloader/
+P066 [(none)] │   ├── MediaDownloader.java
+P067 [(none)] │   └── NamingTemplate.java
+P068 [(none)] ├── storage/
+P069 [(none)] │   ├── Database.java
+P070 [(none)] │   └── DownloadRecordRepository.java
+P071 [(none)] ├── model/
+P072 [(none)] │   ├── User.java / Tweet.java / MediaItem.java ...
+P073 [(none)] └── util/
+P074 [Heading 1] 4. 核心模块详细设计
+P075 [Heading 2] 4.1 配置模块（config）
+P076 [Heading 3] 4.1.1 配置结构
+P077 [(none)] 配置文件采用 YAML 格式，主要节点如下：
+P078 [(none)] save-path: "./downloads"
+P079 [(none)] accounts:
+P080 [(none)]   - name: account1
+P081 [(none)]     cookie: "auth_token=xxx; ct0=yyy;"
+P082 [(none)] proxy:
+P083 [(none)]   enabled: false
+P084 [(none)]   url: "http://127.0.0.1:7890"
+P085 [(none)] download:
+P086 [(none)]   max-concurrent: 8
+P087 [(none)]   has-video: true
+P088 [(none)]   has-retweet: false
+P089 [(none)]   time-range: "1990-01-01:2030-01-01"
+P090 [(none)]   naming-template: "{user}/{date}-{type}_{index}.{ext}"
+P091 [(none)]   enable-incremental: true
+P092 [(none)] rate-limit:
+P093 [(none)]   request-interval-ms: 500
+P094 [(none)]   max-retries: 3
+P095 [Heading 3] 4.1.2 关键职责
+P096 [(none)] • ConfigLoader：读取 YAML，合并默认值与环境变量，执行必填项与格式校验。
+P097 [(none)] • AppConfig：强类型配置对象，供各模块注入使用。
+P098 [Heading 2] 4.2 GraphQL 客户端（client）
+P099 [Heading 3] 4.2.1 GraphQLClient
+P100 [(none)] 职责：统一发起 GraphQL 请求，组装 Header（含 cookie、x-csrf-token、x-client-transaction-id 等），处理响应解析与基础错误。
+P101 [(none)] 核心方法示例：
+P102 [(none)]   <T> T execute(String operationName, String queryId, Map<String,Object> variables, Class<T> type)
+P103 [(none)]   JsonNode executeRaw(String operationName, String queryId, Map<String,Object> variables)
+P104 [Heading 3] 4.2.2 TransactionIdGenerator
+P105 [(none)] 职责：生成 X-Client-Transaction-ID。实现可替换，便于在算法变更时快速适配。生成失败或服务端拒绝时，由 Client 触发重试并重新生成。
+P106 [(none)] 接口建议：String generate(String path, String method)；
+P107 [Heading 3] 4.2.3 请求拦截与重试
+P108 [(none)] 通过 OkHttp Interceptor 实现：注入账号 Cookie、统一 User-Agent、记录请求日志、捕获 429 / Rate Limit 响应并通知 RateLimiter 与 AccountPool。
+P109 [(none)] 重试策略：最多 N 次，指数退避，可切换账号后重试。
+P110 [Heading 2] 4.3 账号池（account）
+P111 [(none)] • Account：封装 name、cookie、ct0、authToken、状态（可用/限流中/失效）、最后使用时间等。
+P112 [(none)] • AccountPool：维护账号列表，提供 acquire() / release() / markRateLimited() / markInvalid() 等方法。
+P113 [(none)]   轮换策略：优先选择当前可用且最近未使用的账号；全部限流时进入等待或抛出友好异常。
+P114 [Heading 2] 4.4 限流器（ratelimit）
+P115 [(none)] • 基于信号量控制最大并发请求数。
+P116 [(none)] • 维护最小请求间隔（request-interval-ms）。
+P117 [(none)] • 收到 Rate Limit 响应后，延长对应账号冷却时间，并触发全局短暂退避。
+P118 [(none)] • 与 AccountPool 协同：限流账号自动切换到其他可用账号。
+P119 [Heading 2] 4.5 任务体系（task）
+P120 [Heading 3] 4.5.1 Task 接口
+P121 [(none)] public interface Task {
+P122 [(none)]     String name();
+P123 [(none)]     void execute(TaskContext context) throws Exception;
+P124 [(none)] }
+P125 [(none)] TaskContext 提供 GraphQLClient、MediaDownloader、Storage、Config、进度回调等依赖。
+P126 [Heading 3] 4.5.2 具体任务
+TABLE2 rows=6 cols=2
+   R00 | 任务类 | 职责摘要
+   R01 | UserMediaTask | 按 screen_name 拉取用户媒体时间线，支持排除转推、亮点、喜欢、时间范围，解析媒体列表并提交下载
+   R02 | TagSearchTask | 按 Tag 或高级搜索 filter 拉取结果，解析媒体与可选文本并下载
+   R03 | ReplyTask | 根据用户或推文链接拉取评论区，提取媒体并下载
+   R04 | TextTask | 拉取用户纯文本推文并保存为文本/报告
+   R05 | ProfileTask | 获取用户头像、banner、简介等信息并保存
+P127 [Heading 3] 4.5.3 TaskScheduler
+P128 [(none)] 负责接收一个或多个 Task，按配置的并发度调度执行，汇总成功/失败结果，输出最终统计。
+P129 [(none)] 支持串行（多用户依次）或有限并行（多任务同时）模式。
+P130 [Heading 2] 4.6 下载器（downloader）
+P131 [(none)] • MediaDownloader：接收 MediaItem 列表，使用线程池并发下载，调用 NamingTemplate 生成路径，写入文件，并更新 Storage 状态。
+P132 [(none)] • NamingTemplate：根据模板字符串与上下文变量（user、date、tweetId、type、index、ext 等）渲染最终文件名与相对路径。
+P133 [(none)] • 下载失败时按配置重试，最终仍失败则记录到失败列表并继续后续任务。
+P134 [(none)] • 支持进度回调（已完成数 / 总数），供 CLI 刷新进度条或日志。
+P135 [Heading 2] 4.7 存储模块（storage）
+P136 [Heading 3] 4.7.1 数据表设计
+P137 [(none)] 表 download_record（核心）：
+TABLE3 rows=10 cols=3
+   R00 | 字段 | 类型 | 说明
+   R01 | id | INTEGER PK | 自增主键
+   R02 | tweet_id | TEXT | 推文 ID
+   R03 | media_url | TEXT | 媒体原始 URL（唯一约束可与 tweet_id 组合）
+   R04 | media_type | TEXT | image / video / gif
+   R05 | local_path | TEXT | 本地相对或绝对路径
+   R06 | user_screen_name | TEXT | 所属用户
+   R07 | task_type | TEXT | 来源任务类型
+   R08 | status | TEXT | SUCCESS / FAILED / SKIPPED
+   R09 | downloaded_at | TEXT | 下载完成时间
+P138 [(none)] 可选扩展表：user_profile（主页信息）、task_run（任务执行历史）等。
+P139 [Heading 3] 4.7.2 Repository 职责
+P140 [(none)] • exists(tweetId, mediaUrl)：判断是否已下载（增量依据）。
+P141 [(none)] • save(record)：写入或更新记录。
+P142 [(none)] • listFailed() / clearCache(user) 等维护方法。
+P143 [(none)] 数据库文件默认放在用户目录或配置指定路径，程序启动时自动建表。
+P144 [Heading 1] 5. 关键流程设计
+P145 [Heading 2] 5.1 用户媒体下载主流程
+P146 [(none)] 1. CLI 解析参数与配置，构建 AppConfig、AccountPool、GraphQLClient、Storage 等。
+P147 [(none)] 2. 创建 UserMediaTask，传入目标 screen_name 列表与过滤条件。
+P148 [(none)] 3. TaskScheduler 执行任务：
+P149 [(none)]    a. 调用 GraphQL 获取用户信息与媒体时间线（分页）。
+P150 [(none)]    b. 解析推文与媒体列表，按时间范围与转推选项过滤。
+P151 [(none)]    c. 对每条媒体查询 Storage，跳过已下载项（增量）。
+P152 [(none)]    d. 将待下载列表提交 MediaDownloader。
+P153 [(none)]    e. 下载完成后写回 Storage，更新进度。
+P154 [(none)] 4. 全部完成后输出统计（调用次数、成功数、失败数、耗时）。
+P155 [(none)] 5. 异常路径：Rate Limit → 切换账号或退避后重试；Cookie 失效 → 标记账号并提示用户。
+P156 [Heading 2] 5.2 Tag / 高级搜索流程
+P157 [(none)] 与用户媒体流程类似，差异在于：
+P158 [(none)] • 使用搜索类 GraphQL 操作，variables 中传入 tag 或 filter 字符串。
+P159 [(none)] • 结果可能跨用户，命名模板中需体现 tag 或搜索条件。
+P160 [(none)] • 可选同时落盘推文文本。
+P161 [Heading 2] 5.3 评论区与其他任务
+P162 [(none)] ReplyTask：根据推文 ID 或用户时间线中的回复关系拉取评论，再走统一下载链路。
+P163 [(none)] TextTask / ProfileTask：不经过 MediaDownloader，直接将文本或头像等写入文件系统与可选数据库表。
+P164 [(none)] 所有任务共享同一套 Client、AccountPool、RateLimiter 与 Storage，保证行为一致。
+P165 [Heading 1] 6. GraphQL 操作约定
+P166 [(none)] 为便于应对接口变更，将 operationName、queryId、features 等定义放在外部配置文件（如 graphql-operations.yaml）中，由 Client 加载。主要操作包括但不限于：
+TABLE4 rows=6 cols=2
+   R00 | 操作用途 | 说明
+   R01 | UserByScreenName | 根据 screen_name 获取用户基本信息与 rest_id
+   R02 | UserMedia / UserTweets | 用户媒体或推文时间线（分页）
+   R03 | SearchTimeline | Tag 或高级搜索结果
+   R04 | TweetDetail / Replies | 单条推文详情与评论区
+   R05 | UserHighlights / Likes | 亮点与喜欢时间线（在权限允许时）
+P167 [(none)] 实际 queryId 与 features 需与当前 X 前端保持同步，建议在文档或配置中集中维护，并提供更新说明。
+P168 [Heading 1] 7. 异常处理与日志
+P169 [Heading 2] 7.1 异常分类
+P170 [(none)] • ConfigException：配置缺失或格式错误，启动阶段直接失败并给出明确提示。
+P171 [(none)] • AuthException：Cookie 失效或认证失败，标记账号并提示更新。
+P172 [(none)] • RateLimitException：触发限流，进入退避与账号切换流程。
+P173 [(none)] • NetworkException：网络或代理问题，可重试。
+P174 [(none)] • DownloadException：单文件下载失败，记录后继续其他文件。
+P175 [Heading 2] 7.2 日志规范
+P176 [(none)] • 使用 SLF4J，级别：ERROR / WARN / INFO / DEBUG。
+P177 [(none)] • 关键请求带简要上下文（账号名、operation、耗时）。
+P178 [(none)] • 敏感信息（完整 Cookie）不得输出到日志。
+P179 [(none)] • 最终汇总以 INFO 输出，失败明细可写独立文件或 DEBUG。
+P180 [Heading 1] 8. 部署与运行设计
+P181 [(none)] • 使用 Maven/Gradle 打包为可执行 fat-jar（含依赖）。
+P182 [(none)] • 运行方式示例：
+P183 [(none)]   java -jar x-media-downloader.jar user --users elonmusk,openai --config config.yaml
+P184 [(none)]   java -jar x-media-downloader.jar tag --tag "#example" --config config.yaml
+P185 [(none)] • 配置文件、数据库文件、下载目录均可通过参数或配置指定，默认相对当前工作目录。
+P186 [(none)] • 文档需包含：环境要求（Java 17+）、Cookie 获取步骤、配置示例、常见问题与限流说明。
+P187 [Heading 1] 9. 实现优先级建议
+P188 [(none)] 与需求分析中的阶段对应：
+P189 [(none)] 第一阶段：Config + GraphQLClient（基础）+ Account（单账号）+ RateLimiter + UserMediaTask + MediaDownloader + Storage + 基础 CLI。
+P190 [(none)] 第二阶段：多账号池、代理、TagSearchTask、ReplyTask、TextTask、ProfileTask、进度与报告。
+P191 [(none)] 第三阶段：TransactionId 强化、配置校验完善、统计报告增强、打包与完整文档、可选稳定性打磨。
+P192 [Heading 1] 10. 文档说明
+P193 [(none)] 本详细设计文档依据需求分析确定的功能范围编写，给出了系统架构、模块职责、核心类与数据模型、关键流程及实现优先级，可直接作为开发任务拆分与编码实现的依据。具体 GraphQL queryId 与 features 需在实现时根据当时 X 前端接口进行填充与维护。如需调整模块边界或补充接口细节，可在本设计基础上迭代。
+P194 [(none)] 
+P195 [(none)] — 文档结束 —

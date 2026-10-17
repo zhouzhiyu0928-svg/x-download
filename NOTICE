@@ -1,0 +1,18 @@
+X Media Downloader（Java 重写版）
+Copyright (c) 2026
+
+本项目的功能设计基于以下开源项目（MIT License）：
+    twitter_download — https://github.com/caolvchong-top/twitter_download
+    Copyright (c) twitter_download contributors
+    以 MIT License 发布，许可证全文见：
+    https://github.com/caolvchong-top/twitter_download/blob/main/LICENSE
+
+本重写版为独立实现（Java 语言，与上游无代码复用），仅保留其功能行为与设计约定。
+X-Client-Transaction-ID 生成若采用社区实现，同样需遵守其各自许可证：
+    XClientTransaction — https://github.com/iSarabjitDhiman/XClientTransaction
+
+免责声明：
+1. 本项目仅供编程学习交流、学术研究及个人练习使用。
+2. 使用本工具下载的所有媒体内容（图片、视频等）的知识产权均归原作者及所属平台所有，请尊重相关版权。
+3. 请勿将本工具及所获取的数据用于恶意抓取、侵权传播或其他违法用途。
+4. 开发者不对任何因不当使用本工具而导致的违规行为、法律纠纷或直接/间接损失承担责任。请风险自担。
